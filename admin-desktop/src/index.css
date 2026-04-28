@@ -115,6 +115,7 @@ th, td {
   padding: 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
 }
 
 th {
@@ -127,6 +128,7 @@ th {
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 .badge.active { background: rgba(52, 168, 83, 0.1); color: var(--accent-success); border: 1px solid var(--accent-success); }
 .badge.expiring { background: rgba(29, 211, 176, 0.1); color: var(--accent-warning); border: 1px solid var(--accent-warning); }

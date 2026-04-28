@@ -66,12 +66,12 @@ const Settings = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'var(--accent-gold)', fontSize: '1.4rem', fontWeight: 700
             }}>
-              RV
+              MG
             </div>
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>Rajesh Verma</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>rajesh.verma@securefirst.co</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', opacity: 0.8 }}>IRDAI-AG-2019-004421</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>Mohit Gupta</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>support@securefirst.co</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', opacity: 0.8 }}>+91 8343000065</div>
             </div>
           </div>
         </div>
