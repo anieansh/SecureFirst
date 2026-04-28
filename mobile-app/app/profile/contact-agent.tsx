@@ -9,17 +9,17 @@ export default function ContactAgentScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleCall = () => {
-    Linking.openURL('tel:+918001234567').catch(() => Alert.alert('Unable to open dialer'));
+    Linking.openURL('tel:8343000065').catch(() => Alert.alert('Unable to open dialer'));
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL('https://wa.me/918001234567?text=Hello, I need help with my policy.').catch(() =>
+    Linking.openURL('https://wa.me/918343000065?text=Hello, I need help with my policy.').catch(() =>
       Alert.alert('WhatsApp not installed')
     );
   };
 
   const handleEmail = () => {
-    Linking.openURL('mailto:support@securefirst.in?subject=Policy Support').catch(() =>
+    Linking.openURL('mailto:Support@securefirst.co?subject=Policy Support').catch(() =>
       Alert.alert('Unable to open mail')
     );
   };
@@ -57,7 +57,7 @@ export default function ContactAgentScreen() {
           <ContactButton
             icon={<Phone size={22} color={colors.accentSuccess} />}
             label="Call Us"
-            subtitle="+91 800 123 4567"
+            subtitle="8343000065"
             color={colors.accentSuccess}
             onPress={handleCall}
           />
@@ -71,7 +71,7 @@ export default function ContactAgentScreen() {
           <ContactButton
             icon={<Mail size={22} color={colors.accentGold} />}
             label="Email Support"
-            subtitle="support@securefirst.in"
+            subtitle="Support@securefirst.co"
             color={colors.accentGold}
             onPress={handleEmail}
           />
@@ -89,11 +89,11 @@ export default function ContactAgentScreen() {
           </View>
           <View style={styles.infoRow}>
             <MapPin size={18} color={colors.accentGold} />
-            <Text style={styles.infoText}>123 Insurance Lane, Mumbai, MH 400001</Text>
+            <Text style={styles.infoText}>165 FIRST FLOOR NEW GRAIN MARKET SHAHABAD HARYANA 136135</Text>
           </View>
           <View style={styles.infoRow}>
             <Globe size={18} color={colors.accentGold} />
-            <Text style={styles.infoText}>www.securefirst.in</Text>
+            <Text style={styles.infoText}>www.securefirst.co</Text>
           </View>
         </View>
       </ScrollView>

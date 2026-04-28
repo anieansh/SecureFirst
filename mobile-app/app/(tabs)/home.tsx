@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
 import { useAuth } from '../_layout';
 import axios from 'axios';
 import { ShieldAlert, ArrowRight, Phone, MessageCircle, Mail } from 'lucide-react-native';
@@ -123,15 +123,15 @@ export default function HomeScreen() {
               <Text style={styles.supportTitle}>Contact Support</Text>
               <Text style={styles.supportSubtitle}>Mon–Sat, 9am–7pm</Text>
               <View style={styles.supportActions}>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => {}}>
+                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('tel:8343000065').catch(() => Alert.alert('Unable to open dialer'))}>
                   <Phone size={24} color={colors.accentGold} />
                   <Text style={styles.supportBtnText} numberOfLines={1}>Call Us</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => {}}>
+                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('https://wa.me/918343000065?text=Hello, I need help with my policy.').catch(() => Alert.alert('WhatsApp not installed'))}>
                   <MessageCircle size={24} color={colors.accentGold} />
                   <Text style={styles.supportBtnText} numberOfLines={1}>WhatsApp</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => {}}>
+                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('mailto:Support@securefirst.co?subject=Policy Support').catch(() => Alert.alert('Unable to open mail'))}>
                   <Mail size={24} color={colors.accentGold} />
                   <Text style={styles.supportBtnText} numberOfLines={1}>Email</Text>
                 </TouchableOpacity>

@@ -12,19 +12,23 @@ const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/policy' : 'ht
 import { getDummyPolicies } from '../dummyData';
 
 export default function ProfileScreen() {
-  const { userMobile, logout } = useAuth();
-  const [userName, setUserName] = useState('Client');
+  const { userMobile, userEmail, userName: contextName, logout } = useAuth();
+  const [userName, setUserName] = useState(contextName || 'Client');
   const colors = useTheme();
   const { isDark, toggleTheme } = useThemeMode();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
+    // Use name from AuthContext if available, otherwise fetch from policies
+    if (contextName) {
+      setUserName(contextName);
+      return;
+    }
     const fetchInfo = async () => {
       try {
         const res = await axios.get(`${API_URL}/${userMobile}`);
         let policies = res.data;
         if (!policies || policies.length === 0) policies = getDummyPolicies(userMobile);
-        
         if (policies.length > 0) {
           setUserName(policies[0].clientName);
         }
@@ -33,7 +37,7 @@ export default function ProfileScreen() {
       }
     };
     if (userMobile) fetchInfo();
-  }, [userMobile]);
+  }, [userMobile, contextName]);
 
   const handleSignOut = () => {
     logout();
@@ -57,6 +61,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.name}>{userName}</Text>
           <Text style={styles.phone}>+91 {userMobile}</Text>
+          {userEmail ? <Text style={styles.email}>{userEmail}</Text> : null}
         </View>
 
         <View style={styles.menuGroup}>
@@ -74,7 +79,7 @@ export default function ProfileScreen() {
           </View>
 
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuItem} onPress={() => router.push(item.route as any)}>
+            <TouchableOpacity key={index} style={[styles.menuItem, index === menuItems.length - 1 && { borderBottomWidth: 0 }]} onPress={() => router.push(item.route as any)}>
               <View style={styles.menuItemLeft}>
                 {item.icon}
                 <Text style={styles.menuItemText}>{item.title}</Text>
@@ -101,6 +106,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   avatarText: { fontSize: 40, fontWeight: '900', color: colors.accentGold },
   name: { fontSize: 32, fontWeight: '900', color: colors.textPrimary, marginBottom: 6, letterSpacing: -1 },
   phone: { fontSize: 18, color: colors.textSecondary, fontWeight: '600' },
+  email: { fontSize: 14, color: colors.textSecondary, fontWeight: '500', marginTop: 4 },
   menuGroup: { backgroundColor: colors.bgSecondary, borderRadius: 28, paddingVertical: 10, marginBottom: 32, borderWidth: 1, borderColor: colors.borderLight, shadowColor: colors.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4 },
   menuItemDark: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   menuItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 20, paddingHorizontal: 24, borderBottomWidth: 1, borderBottomColor: colors.borderLight },

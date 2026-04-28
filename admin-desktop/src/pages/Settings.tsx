@@ -70,7 +70,7 @@ const Settings = () => {
             </div>
             <div>
               <div style={{ fontSize: '1.3rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.3rem' }}>Rajesh Verma</div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>rajesh.verma@securefirst.in</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>rajesh.verma@securefirst.co</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', opacity: 0.8 }}>IRDAI-AG-2019-004421</div>
             </div>
           </div>
