@@ -1,6 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const admin = require('firebase-admin');
+
+try {
+  // Try to initialize with service account key if it exists
+  const serviceAccount = require('../serviceAccountKey.json');
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+} catch (e) {
+  // For verifying ID tokens, we only strictly need the project ID.
+  console.log('[Mobile Auth] Warning: serviceAccountKey.json not found, initializing with projectId only.');
+  try {
+    admin.initializeApp({
+      projectId: 'first-4b330'
+    });
+  } catch (err) {
+    console.error('[Mobile Auth] Failed to initialize firebase-admin:', err);
+  }
+}
 
 // In-memory user store for mobile app users
 let users = [];
@@ -202,6 +221,55 @@ router.post('/change-password', async (req, res) => {
   } catch (err) {
     console.error('[Mobile Auth] Change password error:', err);
     return res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// POST /firebase-login — Verify Firebase OTP and login/register
+router.post('/firebase-login', async (req, res) => {
+  const { idToken, name, email } = req.body;
+  
+  if (!idToken) {
+    return res.status(400).json({ error: 'ID Token is required' });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    // Note: Firebase includes the country code in phone_number.
+    // E.g., +919999999999. If your local DB stores it without +91, 
+    // you may need to strip it: decodedToken.phone_number.replace('+91', '')
+    let mobile = decodedToken.phone_number; 
+    
+    // Simple strip if starts with +91 (Assuming India numbers for now)
+    if (mobile.startsWith('+91')) {
+      mobile = mobile.replace('+91', '');
+    }
+
+    if (!mobile) {
+      return res.status(400).json({ error: 'Token does not contain a phone number' });
+    }
+
+    let user = findUser(mobile);
+    if (!user) {
+      // Auto-register if not exists
+      user = {
+        mobile,
+        email: email || '',
+        name: name || 'SecureFirst User',
+        createdAt: new Date().toISOString()
+      };
+      users.push(user);
+      console.log(`[Mobile Auth] New user registered via Firebase: ${mobile}`);
+    }
+
+    console.log(`[Mobile Auth] User logged in via Firebase: ${mobile}`);
+    return res.json({
+      success: true,
+      user: { mobile: user.mobile, email: user.email, name: user.name }
+    });
+
+  } catch (error) {
+    console.error('[Mobile Auth] Firebase token verification error:', error);
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 });
 

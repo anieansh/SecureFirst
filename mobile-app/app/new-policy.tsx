@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, FileUp, FileCheck } from 'lucide-react-native';
 import axios from 'axios';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import { Platform } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/leads' : 'http://10.0.2.2:5001/api/leads';
+const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/leads' : 'http://localhost:5001/api/leads';
 
 export default function NewPolicyScreen() {
   const { userMobile } = useAuth();
@@ -16,27 +16,82 @@ export default function NewPolicyScreen() {
 
   const [name, setName] = useState('');
   const [policyType, setPolicyType] = useState('Motor'); // Motor, Home, Travel
-  const [vehicleNumber, setVehicleNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Motor specific fields
+  const [carCondition, setCarCondition] = useState('New'); // New, Old
+  const [carName, setCarName] = useState('');
+  const [exShowroomPrice, setExShowroomPrice] = useState('');
+  
+  const [rcImage, setRcImage] = useState<any>(null);
+  const [previousPolicyImage, setPreviousPolicyImage] = useState<any>(null);
+
+  const handlePickDocument = async (setDoc: (doc: any) => void) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/jpeg', 'image/png', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setDoc(result.assets[0]);
+      }
+    } catch (err) {
+      console.error('Error picking document', err);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name || !policyType) {
       alert('Please fill in your name and select a policy type.');
       return;
     }
-    if (policyType === 'Motor' && !vehicleNumber) {
-      alert('Please provide a vehicle number for Motor policies.');
-      return;
+    if (policyType === 'Motor') {
+      if (carCondition === 'New' && (!carName || !exShowroomPrice)) {
+        alert('Please provide car name and ex-showroom price for a new car.');
+        return;
+      }
+      if (carCondition === 'Old' && !rcImage) {
+        alert('Please upload RC document for an old car.');
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      await axios.post(API_URL, {
-        name,
-        policyType,
-        mobileNumber: userMobile,
-        vehicleNumber: policyType === 'Motor' ? vehicleNumber : undefined
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('policyType', policyType);
+      formData.append('mobileNumber', userMobile || '');
+
+      if (policyType === 'Motor') {
+        formData.append('carCondition', carCondition);
+        if (carCondition === 'New') {
+          formData.append('carName', carName);
+          formData.append('exShowroomPrice', exShowroomPrice);
+        } else if (carCondition === 'Old') {
+          if (rcImage) {
+            formData.append('rcImage', {
+              uri: rcImage.uri,
+              name: rcImage.name || 'rcImage.jpg',
+              type: rcImage.mimeType || 'image/jpeg'
+            } as any);
+          }
+          if (previousPolicyImage) {
+            formData.append('previousPolicyImage', {
+              uri: previousPolicyImage.uri,
+              name: previousPolicyImage.name || 'prevPolicy.jpg',
+              type: previousPolicyImage.mimeType || 'image/jpeg'
+            } as any);
+          }
+        }
+      }
+
+      await axios.post(API_URL, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       setSuccess(true);
     } catch (err) {
@@ -48,6 +103,7 @@ export default function NewPolicyScreen() {
   };
 
   const types = ['Motor', 'Home', 'Travel'];
+  const conditions = ['New', 'Old'];
 
   if (success) {
     return (
@@ -74,7 +130,7 @@ export default function NewPolicyScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.formContainer}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.formContainer}>
         <Text style={styles.label}>Policy Holder Name</Text>
         <TextInput 
           style={styles.input} 
@@ -99,23 +155,82 @@ export default function NewPolicyScreen() {
 
         {policyType === 'Motor' && (
           <View style={{ marginTop: 24 }}>
-            <Text style={styles.label}>Vehicle Number</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="e.g. MH02XY9876" 
-              placeholderTextColor={colors.textSecondary}
-              value={vehicleNumber} 
-              onChangeText={setVehicleNumber} 
-            />
+            <Text style={styles.label}>Car Condition</Text>
+            <View style={[styles.pillContainer, { marginBottom: 24 }]}>
+              {conditions.map(c => (
+                <TouchableOpacity 
+                  key={c} 
+                  style={[styles.pill, carCondition === c && styles.pillActive]} 
+                  onPress={() => setCarCondition(c)}
+                >
+                  <Text style={[styles.pillText, carCondition === c && styles.pillTextActive]}>{c} Car</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {carCondition === 'New' ? (
+              <>
+                <Text style={styles.label}>Car Name</Text>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="e.g. Hyundai Creta" 
+                  placeholderTextColor={colors.textSecondary}
+                  value={carName} 
+                  onChangeText={setCarName} 
+                />
+
+                <Text style={styles.label}>Ex-Showroom Price</Text>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="e.g. 1500000" 
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="numeric"
+                  value={exShowroomPrice} 
+                  onChangeText={setExShowroomPrice} 
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>Upload RC (PNG, JPG, PDF)</Text>
+                <TouchableOpacity style={styles.uploadWidget} onPress={() => handlePickDocument(setRcImage)}>
+                  {rcImage ? (
+                    <View style={styles.uploadContent}>
+                      <FileCheck size={28} color={colors.accentSuccess} />
+                      <Text style={styles.uploadTextSuccess}>{rcImage.name}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.uploadContent}>
+                      <FileUp size={28} color={colors.textSecondary} />
+                      <Text style={styles.uploadText}>+ Upload RC Image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.label}>Previous Policy (If Any)</Text>
+                <TouchableOpacity style={styles.uploadWidget} onPress={() => handlePickDocument(setPreviousPolicyImage)}>
+                  {previousPolicyImage ? (
+                    <View style={styles.uploadContent}>
+                      <FileCheck size={28} color={colors.accentSuccess} />
+                      <Text style={styles.uploadTextSuccess}>{previousPolicyImage.name}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.uploadContent}>
+                      <FileUp size={28} color={colors.textSecondary} />
+                      <Text style={styles.uploadText}>+ Upload Policy Image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
         
-        <View style={{ flex: 1 }} />
+        <View style={{ height: 40 }} />
 
         <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color={colors.bgPrimary} /> : <Text style={styles.primaryBtnText}>Submit Lead</Text>}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -125,14 +240,18 @@ const createStyles = (colors: any) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 20, backgroundColor: colors.bgSecondary, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   backBtn: { padding: 10, backgroundColor: colors.bgPrimary, borderRadius: 16 },
   headerTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary },
-  formContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 32, paddingBottom: 40 },
+  formContainer: { paddingHorizontal: 20, paddingTop: 32, paddingBottom: 40 },
   label: { color: colors.textSecondary, marginBottom: 12, fontSize: 14, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5 },
   input: { width: '100%', backgroundColor: colors.bgSecondary, borderWidth: 2, borderColor: colors.borderLight, borderRadius: 20, padding: 20, color: colors.textPrimary, fontSize: 18, fontWeight: '700', shadowColor: colors.shadowColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 32 },
-  pillContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  pillContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   pill: { paddingHorizontal: 20, paddingVertical: 14, borderRadius: 24, backgroundColor: colors.bgSecondary, borderWidth: 2, borderColor: colors.borderLight },
   pillActive: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
   pillText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
   pillTextActive: { color: colors.bgPrimary },
+  uploadWidget: { backgroundColor: colors.bgSecondary, borderWidth: 2, borderColor: colors.borderLight, borderStyle: 'dashed', borderRadius: 20, padding: 20, marginBottom: 32, alignItems: 'center', justifyContent: 'center' },
+  uploadContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  uploadText: { color: colors.textSecondary, fontSize: 16, fontWeight: '700' },
+  uploadTextSuccess: { color: colors.accentSuccess, fontSize: 16, fontWeight: '700' },
   primaryBtn: { width: '100%', backgroundColor: colors.textPrimary, padding: 22, borderRadius: 20, alignItems: 'center', shadowColor: colors.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 },
   primaryBtnText: { color: colors.bgPrimary, fontSize: 18, fontWeight: '900', letterSpacing: 0.5 },
   successWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },

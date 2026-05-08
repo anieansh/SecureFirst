@@ -58,7 +58,8 @@ const Leads = () => {
                   <th>Client Name</th>
                   <th>Mobile Number</th>
                   <th>Interested Policy</th>
-                  <th>Vehicle Number</th>
+                  <th>Car Condition</th>
+                  <th>Details / Docs</th>
                   <th>Created Date</th>
                   <th>Status</th>
                 </tr>
@@ -69,7 +70,23 @@ const Leads = () => {
                     <td style={{ fontWeight: 500, color: 'var(--accent-gold)' }}>{l.name}</td>
                     <td>{l.mobileNumber}</td>
                     <td>{l.policyType}</td>
-                    <td>{l.vehicleNumber || '-'}</td>
+                    <td>{l.carCondition || '-'}</td>
+                    <td>
+                      {l.carCondition === 'New' ? (
+                        <div style={{ fontSize: '0.85rem' }}>
+                          <div><span style={{color: 'var(--text-secondary)'}}>Model:</span> {l.carName || '-'}</div>
+                          <div><span style={{color: 'var(--text-secondary)'}}>Price:</span> {l.exShowroomPrice ? `₹${l.exShowroomPrice}` : '-'}</div>
+                        </div>
+                      ) : l.carCondition === 'Old' ? (
+                        <div className="flex gap-2" style={{ fontSize: '0.85rem' }}>
+                          {l.rcImagePath && <a href={`http://localhost:5001${l.rcImagePath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>RC Doc</a>}
+                          {l.previousPolicyPath && <a href={`http://localhost:5001${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
+                          {!l.rcImagePath && !l.previousPolicyPath && <span style={{color: 'var(--text-secondary)'}}>No Docs</span>}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td>{new Date(l.createdAt).toLocaleDateString()}</td>
                     <td><span className="badge expiring">New Lead</span></td>
                   </tr>

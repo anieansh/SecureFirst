@@ -5,18 +5,21 @@ const policyRoutes = require('./routes/policyRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const authRoutes = require('./routes/authRoutes');
 const mobileAuthRoutes = require('./routes/mobileAuthRoutes');
+const configRoutes = require('./routes/configRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // Main Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', policyRoutes);
 app.use('/api', leadRoutes);
 app.use('/api/mobile-auth', mobileAuthRoutes);
+app.use('/api/config', configRoutes);
 
 app.get('/', (req, res) => {
   res.send('Secure First API is running IN-MEMORY mode.');
