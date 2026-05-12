@@ -6,6 +6,9 @@ const leadRoutes = require('./routes/leadRoutes');
 const authRoutes = require('./routes/authRoutes');
 const mobileAuthRoutes = require('./routes/mobileAuthRoutes');
 const configRoutes = require('./routes/configRoutes');
+const apiKeyAuth = require('./middleware/apiKeyAuth');
+
+const requireMobileUser = require('./middleware/mobileAuth');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -16,10 +19,10 @@ app.use('/uploads', express.static('uploads'));
 
 // Main Routes
 app.use('/api/auth', authRoutes);
-app.use('/api', policyRoutes);
-app.use('/api', leadRoutes);
-app.use('/api/mobile-auth', mobileAuthRoutes);
-app.use('/api/config', configRoutes);
+app.use('/api', requireMobileUser, policyRoutes);
+app.use('/api', requireMobileUser, leadRoutes);
+app.use('/api/mobile-auth', apiKeyAuth, mobileAuthRoutes);
+app.use('/api/config', apiKeyAuth, configRoutes);
 
 app.get('/', (req, res) => {
   res.send('Secure First API is running IN-MEMORY mode.');

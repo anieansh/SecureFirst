@@ -78,10 +78,13 @@ const Leads = () => {
                           <div><span style={{color: 'var(--text-secondary)'}}>Price:</span> {l.exShowroomPrice ? `₹${l.exShowroomPrice}` : '-'}</div>
                         </div>
                       ) : l.carCondition === 'Old' ? (
-                        <div className="flex gap-2" style={{ fontSize: '0.85rem' }}>
-                          {l.rcImagePath && <a href={`http://localhost:5001${l.rcImagePath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>RC Doc</a>}
-                          {l.previousPolicyPath && <a href={`http://localhost:5001${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
-                          {!l.rcImagePath && !l.previousPolicyPath && <span style={{color: 'var(--text-secondary)'}}>No Docs</span>}
+                        <div style={{ fontSize: '0.85rem' }}>
+                          {l.vehicleNumber && <div><span style={{color: 'var(--text-secondary)'}}>Reg No:</span> <strong style={{color: 'var(--accent-gold)'}}>{l.vehicleNumber}</strong></div>}
+                          <div className="flex gap-2" style={{ marginTop: l.vehicleNumber ? '4px' : 0 }}>
+                            {l.rcImagePath && <a href={`http://localhost:5001${l.rcImagePath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>RC Doc</a>}
+                            {l.previousPolicyPath && <a href={`http://localhost:5001${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
+                            {!l.rcImagePath && !l.previousPolicyPath && <span style={{color: 'var(--text-secondary)'}}>No Docs</span>}
+                          </div>
                         </div>
                       ) : (
                         '-'
