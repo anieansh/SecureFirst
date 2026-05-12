@@ -1,4 +1,5 @@
-import '@react-native-firebase/app';
+// import '@react-native-firebase/app';
+import '../utils/firebase';
 import { Stack } from 'expo-router';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { View, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Linking, Platform, StyleSheet } from 'react-native';
@@ -8,7 +9,10 @@ import Constants from 'expo-constants';
 import axios from 'axios';
 import { ShieldAlert } from 'lucide-react-native';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/config' : 'http://localhost:5001/api/config';
+import { API_ENDPOINTS, api } from '../constants/api';
+
+const API_URL = API_ENDPOINTS.CONFIG;
+
 
 export const AuthContext = createContext<{
   userMobile: string;
@@ -61,7 +65,7 @@ function RootApp() {
 
   const checkAppVersion = async () => {
     try {
-      const res = await axios.get(`${API_URL}/version`);
+      const res = await api.get(`${API_URL}/version`);
       const { minimumAppVersion, updateUrls } = res.data;
       
       const currentVersion = Constants.expoConfig?.version || '1.0.0';

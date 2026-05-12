@@ -7,7 +7,10 @@ import { useAuth } from './_layout';
 import { useTheme } from './theme';
 import * as DocumentPicker from 'expo-document-picker';
 
-const API_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/leads' : 'http://localhost:5001/api/leads';
+import { API_ENDPOINTS, api } from '../constants/api';
+
+const API_URL = API_ENDPOINTS.LEADS;
+
 
 export default function NewPolicyScreen() {
   const { userMobile } = useAuth();
@@ -24,6 +27,7 @@ export default function NewPolicyScreen() {
   const [carName, setCarName] = useState('');
   const [exShowroomPrice, setExShowroomPrice] = useState('');
   
+  const [vehicleNo, setVehicleNo] = useState('');
   const [rcImage, setRcImage] = useState<any>(null);
   const [previousPolicyImage, setPreviousPolicyImage] = useState<any>(null);
 
@@ -52,6 +56,10 @@ export default function NewPolicyScreen() {
         alert('Please provide car name and ex-showroom price for a new car.');
         return;
       }
+      if (carCondition === 'Old' && !vehicleNo) {
+        alert('Please enter the vehicle registration number.');
+        return;
+      }
       if (carCondition === 'Old' && !rcImage) {
         alert('Please upload RC document for an old car.');
         return;
@@ -71,6 +79,7 @@ export default function NewPolicyScreen() {
           formData.append('carName', carName);
           formData.append('exShowroomPrice', exShowroomPrice);
         } else if (carCondition === 'Old') {
+          formData.append('vehicleNumber', vehicleNo);
           if (rcImage) {
             formData.append('rcImage', {
               uri: rcImage.uri,
@@ -88,7 +97,7 @@ export default function NewPolicyScreen() {
         }
       }
 
-      await axios.post(API_URL, formData, {
+      await api.post(API_URL, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -191,6 +200,16 @@ export default function NewPolicyScreen() {
               </>
             ) : (
               <>
+                <Text style={styles.label}>Vehicle Registration Number</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. MH02AB1234"
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="characters"
+                  value={vehicleNo}
+                  onChangeText={setVehicleNo}
+                />
+
                 <Text style={styles.label}>Upload RC (PNG, JPG, PDF)</Text>
                 <TouchableOpacity style={styles.uploadWidget} onPress={() => handlePickDocument(setRcImage)}>
                   {rcImage ? (

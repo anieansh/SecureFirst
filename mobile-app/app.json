@@ -2,7 +2,7 @@
   "expo": {
     "name": "mobile-app",
     "slug": "mobile-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobileapp",
@@ -44,8 +44,6 @@
         }
       ],
       "expo-secure-store",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
       [
         "expo-build-properties",
         {
@@ -53,7 +51,8 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -14,7 +14,9 @@ import {
   saveBiometricCredentials,
 } from '../../utils/biometrics';
 
-const AUTH_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/mobile-auth' : 'http://10.0.2.2:5001/api/mobile-auth';
+import { API_ENDPOINTS } from '../../constants/api';
+
+const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function SecurityScreen() {
   const colors = useTheme();

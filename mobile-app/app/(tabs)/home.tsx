@@ -6,7 +6,9 @@ import { ShieldAlert, ArrowRight, Phone, MessageCircle, Mail } from 'lucide-reac
 import { router } from 'expo-router';
 import { useTheme } from '../theme';
 import { Platform } from 'react-native';
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/policy' : 'http://10.0.2.2:5001/api/policy';
+import { API_ENDPOINTS, api } from '../../constants/api';
+
+const API_URL = API_ENDPOINTS.POLICIES;
 
 import { getDummyPolicies } from '../dummyData';
 
@@ -20,7 +22,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchPolicies = async () => {
       try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
+        const res = await api.get(`${API_URL}/${userMobile}`);
         if (res.data && res.data.length > 0) {
           setPolicies(res.data);
         } else {

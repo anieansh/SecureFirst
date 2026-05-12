@@ -1,4 +1,3 @@
-import '@react-native-firebase/app';
 import React, { useState, useMemo, useRef } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView,
@@ -9,10 +8,24 @@ import { ShieldCheck, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import auth from '@react-native-firebase/auth';
+import { auth, app, firebase } from '../utils/firebase';
+import { signInWithPhoneNumber } from 'firebase/auth';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import axios from 'axios';
 
-const AUTH_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/mobile-auth' : 'http://localhost:5001/api/mobile-auth';
+import { API_ENDPOINTS, api } from '../constants/api';
+
+const AUTH_URL = API_ENDPOINTS.AUTH;
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCYLhQ8E8Ij1Hgz-KNkToYOwHooneM9rE0",
+  authDomain: "first-4b330.firebaseapp.com",
+  projectId: "first-4b330",
+  storageBucket: "first-4b330.firebasestorage.app",
+  messagingSenderId: "73782412414",
+  appId: "1:73782412414:android:8edd2195f308b50f02c42f"
+};
 
 export default function LoginScreen() {
   const { setConfirmationObj } = useAuth();
@@ -24,6 +37,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const handleSendOtp = async () => {
@@ -31,20 +45,33 @@ export default function LoginScreen() {
       setError('Please enter a valid 10-digit mobile number');
       return;
     }
+    if (!recaptchaVerifier.current) {
+      setError('Recaptcha verifier not initialized');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       // Check if user is new
-      const res = await axios.post(`${AUTH_URL}/check-user`, { mobile });
+      const res = await api.post(`${AUTH_URL}/check-user`, { mobile });
       const isNewUser = !res.data.exists;
 
-      // Force skip reCAPTCHA for test numbers in development
-      if (__DEV__) {
-        auth().settings.appVerificationDisabledForTesting = true;
+      const phoneNumber = `+91${mobile}`; // Defaulting to India code
+      
+      // DEEP DEBUG: Check exact state of Firebase before call
+      const modularKey = app.options.apiKey;
+      const compatKey = firebase.app().options.apiKey;
+      
+      console.log("[Auth Debug] Modular API Key:", modularKey ? "FOUND" : "MISSING");
+      console.log("[Auth Debug] Compat API Key:", compatKey ? "FOUND" : "MISSING");
+      console.log("[Auth Debug] Using Phone Number:", phoneNumber);
+
+      if (!modularKey && !compatKey) {
+        throw new Error("Critical: API Key not found in any Firebase instance.");
       }
 
-      const phoneNumber = `+91${mobile}`; // Defaulting to India code
-      const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+      // Using the modular SDK as it's more direct with the 'auth' instance
+      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier.current!);
       setConfirmationObj(confirmation);
       
       // Navigate to OTP screen and pass the mobile number + new user status
@@ -59,6 +86,11 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={app.options}
+        attemptInvisibleVerification={true}
+      />
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}

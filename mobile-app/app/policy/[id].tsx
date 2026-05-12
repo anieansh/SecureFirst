@@ -7,7 +7,10 @@ import { ArrowLeft, Download, Clock } from 'lucide-react-native';
 import { useTheme } from '../theme';
 
 import { Platform } from 'react-native';
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/policy' : 'http://10.0.2.2:5001/api/policy';
+import { API_ENDPOINTS, api } from '../../constants/api';
+
+const API_URL = API_ENDPOINTS.POLICIES;
+
 
 import { getDummyPolicies } from '../dummyData';
 
@@ -22,7 +25,7 @@ export default function PolicyDetailsScreen() {
   useEffect(() => {
     const fetchPolicy = async () => {
       try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
+        const res = await api.get(`${API_URL}/${userMobile}`);
         let policies = res.data;
         if (!policies || policies.length === 0) policies = getDummyPolicies(userMobile);
         

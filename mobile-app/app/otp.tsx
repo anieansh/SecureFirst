@@ -8,10 +8,12 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import auth from '@react-native-firebase/auth';
+import { auth } from '../utils/firebase';
 import axios from 'axios';
 
-const AUTH_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/mobile-auth' : 'http://localhost:5001/api/mobile-auth';
+import { API_ENDPOINTS, api } from '../constants/api';
+
+const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function OTPScreen() {
   const { confirmationObj, login } = useAuth();
@@ -47,7 +49,7 @@ export default function OTPScreen() {
       await confirmationObj.confirm(otp);
 
       // 2. Get the Firebase ID Token
-      const currentUser = auth().currentUser;
+      const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error('User not found after verification');
       }
@@ -59,7 +61,7 @@ export default function OTPScreen() {
         router.replace({ pathname: '/signup', params: { mobile, idToken } });
       } else {
         // Existing user, send ID Token to our backend to login
-        const res = await axios.post(`${AUTH_URL}/firebase-login`, {
+        const res = await api.post(`${AUTH_URL}/firebase-login`, {
           idToken,
           email: '', 
           name: '' 

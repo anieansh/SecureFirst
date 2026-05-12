@@ -5,7 +5,9 @@ import axios from 'axios';
 import { ShieldAlert, Info } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { Platform } from 'react-native';
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/policy' : 'http://10.0.2.2:5001/api/policy';
+import { API_ENDPOINTS } from '../../constants/api';
+
+const API_URL = API_ENDPOINTS.POLICY;
 
 import { getDummyPolicies } from '../dummyData';
 

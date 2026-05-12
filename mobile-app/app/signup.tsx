@@ -9,7 +9,9 @@ import { useAuth } from './_layout';
 import { useTheme } from './theme';
 import axios from 'axios';
 
-const AUTH_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5001/api/mobile-auth' : 'http://localhost:5001/api/mobile-auth';
+import { API_ENDPOINTS, api } from '../constants/api';
+
+const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function SignupScreen() {
   const { login } = useAuth();
@@ -33,7 +35,7 @@ export default function SignupScreen() {
 
     try {
       // Send ID Token to our backend to create user
-      const res = await axios.post(`${AUTH_URL}/firebase-login`, {
+      const res = await api.post(`${AUTH_URL}/firebase-login`, {
         idToken,
         email: email.trim(), 
         name: name.trim() 
