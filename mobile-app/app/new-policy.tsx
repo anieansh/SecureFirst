@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, CheckCircle, FileUp, FileCheck } from 'lucide-react-native';
 import axios from 'axios';
@@ -16,6 +17,7 @@ const API_URL = API_ENDPOINTS.LEADS;
 
 export default function NewPolicyScreen() {
   const { userMobile } = useAuth();
+  const insets = useSafeAreaInsets();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -179,7 +181,7 @@ export default function NewPolicyScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -298,8 +300,9 @@ export default function NewPolicyScreen() {
         <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color={colors.bgPrimary} /> : <Text style={styles.primaryBtnText}>Submit Lead</Text>}
         </TouchableOpacity>
+        <View style={{ height: insets.bottom }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

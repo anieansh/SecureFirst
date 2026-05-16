@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, ShieldCheck, Fingerprint, Lock, Eye, EyeOff, ScanFace, KeyRound } from 'lucide-react-native';
 import { useTheme } from '../theme';
@@ -20,6 +21,7 @@ const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function SecurityScreen() {
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { userMobile } = useAuth();
 
@@ -156,7 +158,7 @@ export default function SecurityScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -243,7 +245,7 @@ export default function SecurityScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

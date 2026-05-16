@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../_layout';
 import axios from 'axios';
 import { User, LogOut, ChevronRight, Settings, Bell, Phone, Moon } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme, useThemeMode } from '../theme';
 
-import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const { userMobile, userEmail, userName: contextName, logout } = useAuth();
   const userName = contextName || 'Client';
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const { isDark, toggleTheme } = useThemeMode();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -32,7 +33,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 20 }}>
         
         <View style={styles.profileHeader}>
@@ -75,7 +76,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

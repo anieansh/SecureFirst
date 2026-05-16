@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Bell, AlertTriangle, CheckCircle, TrendingUp, Mail } from 'lucide-react-native';
 import { useTheme } from '../theme';
 
 export default function NotificationsScreen() {
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [prefs, setPrefs] = useState({
@@ -39,7 +41,7 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -61,7 +63,7 @@ export default function NotificationsScreen() {
           <PrefRow icon={<Mail size={20} color={colors.textSecondary} />} label="Email Notifications" subtitle="Receive updates by email" prefKey="emailNotifications" />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

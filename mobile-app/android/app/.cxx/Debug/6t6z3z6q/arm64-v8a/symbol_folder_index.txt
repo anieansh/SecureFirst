@@ -1,0 +1,1 @@
+/Users/amolaksingh/Desktop/SecureFirst/mobile-app/android/app/build/intermediates/cxx/Debug/6t6z3z6q/obj/arm64-v8a

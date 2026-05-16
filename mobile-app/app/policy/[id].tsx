@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../_layout';
 import { ArrowLeft, Download, RefreshCcw, Shield, Calendar, CreditCard, User, Hash, FileUp, FileCheck } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as IntentLauncher from 'expo-intent-launcher';
 import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../constants/api';
 
@@ -16,6 +19,7 @@ const API_URL = API_ENDPOINTS.POLICIES;
 export default function PolicyDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { userMobile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [policy, setPolicy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rcImage, setRcImage] = useState<any>(null);
@@ -30,7 +34,7 @@ export default function PolicyDetailsScreen() {
         const res = await apiClient.get(`${API_URL}/${userMobile}`);
         const data = res.data.data || res.data;
         const policies = data || [];
-        
+
         const found = policies.find((p: any) => p._id === id);
         if (found) setPolicy(found);
       } catch (err) {
@@ -44,15 +48,15 @@ export default function PolicyDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.accentGold} style={{ marginTop: 50 }} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!policy) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <ArrowLeft size={24} color={colors.textPrimary} />
@@ -60,7 +64,7 @@ export default function PolicyDetailsScreen() {
           <Text style={styles.headerTitle}>Not Found</Text>
         </View>
         <Text style={styles.errorText}>Policy details could not be loaded.</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -70,7 +74,7 @@ export default function PolicyDetailsScreen() {
 
   let status = 'Active';
   let statusColor = colors.accentSuccess;
-  
+
   if (diffDays < 0) {
     status = 'Expired';
     statusColor = colors.accentDanger;
@@ -79,24 +83,82 @@ export default function PolicyDetailsScreen() {
     statusColor = colors.accentWarning;
   }
 
-  const handleDownload = async () => {
-    if (!policy.attachedDocument) return;
-    
+  const openFile = async (uri: string) => {
     try {
-      setLoading(true);
-      const fileUrl = `https://api.securefirst.co/uploads/${policy.attachedDocument}`;
-      const fileUri = `${FileSystem.documentDirectory}${policy.attachedDocument}`;
-      
-      const downloadRes = await FileSystem.downloadAsync(fileUrl, fileUri);
-      
-      if (downloadRes.status === 200) {
-        await Sharing.shareAsync(downloadRes.uri);
+      if (Platform.OS === 'android') {
+        const contentUri = await FileSystem.getContentUriAsync(uri);
+        const mimeType = policy.attachedDocument.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg';
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+          type: mimeType
+        });
       } else {
-        Alert.alert('Download Failed', 'Could not download the document from the server.');
+        await Sharing.shareAsync(uri);
       }
     } catch (err) {
+      console.error('Error opening file:', err);
+      // Fallback to sharing if intent fails
+      await Sharing.shareAsync(uri);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!policy.attachedDocument) return;
+
+    try {
+      setLoading(true);
+
+      const fileUrl = `https://api.securefirst.co/uploads/${encodeURIComponent(policy.attachedDocument)}`;
+      const fileUri = `${FileSystem.cacheDirectory}${policy.attachedDocument}`;
+
+      const downloadRes = await FileSystem.downloadAsync(fileUrl, fileUri);
+
+      if (downloadRes.status !== 200) {
+        throw new Error(`Server error: ${downloadRes.status}`);
+      }
+
+      try {
+        // Try to save to Automatic Album directly
+        const asset = await MediaLibrary.createAssetAsync(downloadRes.uri);
+        let album = await MediaLibrary.getAlbumAsync('SecureFirst');
+        if (album === null) {
+          await MediaLibrary.createAlbumAsync('SecureFirst', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+
+        // Show Success Popup
+        Alert.alert(
+          'Download Complete',
+          `Policy saved to SecureFirst folder.\n\nLocation: SecureFirst/${policy.attachedDocument}`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Open',
+              onPress: () => openFile(downloadRes.uri)
+            }
+          ]
+        );
+      } catch (mediaErr: any) {
+        console.warn('MediaLibrary save failed, falling back to Share:', mediaErr);
+        // If MediaLibrary fails (common in Expo Go with Audio permission bug), fallback to Sharing
+        Alert.alert(
+          'Download Ready',
+          'The document is ready.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Open / Save',
+              onPress: () => openFile(downloadRes.uri)
+            }
+          ]
+        );
+      }
+
+    } catch (err) {
       console.error('Download error:', err);
-      Alert.alert('Error', 'An error occurred while downloading the policy document.');
+      Alert.alert('Error', 'Failed to download policy. Please check your internet connection.');
     } finally {
       setLoading(false);
     }
@@ -118,7 +180,7 @@ export default function PolicyDetailsScreen() {
 
   const handlePickImage = async (setDoc: (doc: any) => void, useCamera: boolean) => {
     try {
-      const permissionResult = useCamera 
+      const permissionResult = useCamera
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -130,10 +192,10 @@ export default function PolicyDetailsScreen() {
       const result = useCamera
         ? await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 })
         : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 0.7,
-          });
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.7,
+        });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
@@ -190,7 +252,7 @@ export default function PolicyDetailsScreen() {
       await apiClient.post(API_ENDPOINTS.LEADS, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       setIsRenewalModalOpen(false);
       setRcImage(null);
       setPreviousPolicyImage(null);
@@ -204,7 +266,7 @@ export default function PolicyDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -214,7 +276,7 @@ export default function PolicyDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 20 }}>
-        
+
         <View style={styles.topCard}>
           <View style={styles.topCardHeader}>
             <Text style={styles.policyName}>{policy.policyType}</Text>
@@ -261,14 +323,14 @@ export default function PolicyDetailsScreen() {
         </View>
 
         <View style={styles.actionSection}>
-          <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: colors.bgSecondary }]} 
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: colors.bgSecondary }]}
             onPress={() => setIsRenewalModalOpen(true)}
           >
             <RefreshCcw size={22} color={colors.accentGold} />
             <Text style={[styles.actionBtnText, { color: colors.accentGold }]}>Request Renewal</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownload}>
             <Download size={20} color={colors.accentGold} />
             <Text style={styles.secondaryBtnText}>Download Policy PDF</Text>
@@ -283,7 +345,7 @@ export default function PolicyDetailsScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Renewal Request</Text>
             <Text style={styles.modalDesc}>Do you have the RC or previous policy document? Uploading them helps us process your renewal faster.</Text>
-            
+
             <View style={styles.uploadSection}>
               <TouchableOpacity style={styles.uploadRow} onPress={() => handleUploadSource(setRcImage)}>
                 <View style={styles.uploadIconBox}>
@@ -311,8 +373,8 @@ export default function PolicyDetailsScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.cancelBtn} 
+              <TouchableOpacity
+                style={styles.cancelBtn}
                 onPress={() => {
                   setIsRenewalModalOpen(false);
                   setRcImage(null);
@@ -321,9 +383,9 @@ export default function PolicyDetailsScreen() {
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.confirmBtn} 
+
+              <TouchableOpacity
+                style={styles.confirmBtn}
                 onPress={() => handleRenewal(!!(rcImage || previousPolicyImage))}
               >
                 <Text style={styles.confirmBtnText}>
@@ -334,7 +396,7 @@ export default function PolicyDetailsScreen() {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

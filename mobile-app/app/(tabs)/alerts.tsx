@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../_layout';
 import apiClient from '../../utils/apiClient';
 import { ShieldAlert, Info } from 'lucide-react-native';
@@ -14,6 +15,7 @@ export default function AlertsScreen() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function AlertsScreen() {
   }, [userMobile]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Notifications</Text>
       </View>
@@ -84,7 +86,7 @@ export default function AlertsScreen() {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,11 +1,46 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const Policy = require('../models/Policy');
 
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'policy-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.pdf', '.png', '.jpg', '.jpeg'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .pdf, .png, .jpg and .jpeg files are allowed'));
+    }
+  }
+});
+
 // POST /policy → add policy
-router.post('/policy', async (req, res) => {
-  let { clientName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, attachedDocument, vehicleNumber } = req.body;
+router.post('/policy', upload.single('document'), async (req, res) => {
+  let { clientName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber } = req.body;
   
+  const attachedDocument = req.file ? req.file.filename : req.body.attachedDocument;
+
   if (policyType === 'Motor') {
     sumInsured = sumInsured || 0;
     if (!vehicleNumber) {
@@ -15,6 +50,18 @@ router.post('/policy', async (req, res) => {
 
   if (!clientName || !mobileNumber || !policyType || !policyNumber || !insurer || !issueDate || !expiryDate || sumInsured === undefined || sumInsured === '' || annualPremium === undefined || annualPremium === '' || !attachedDocument) {
     return res.status(400).json({ success: false, error: 'Missing required fields including attached document' });
+  }
+
+  // Pre-validate Dates
+  const parsedIssueDate = new Date(issueDate);
+  const parsedExpiryDate = new Date(expiryDate);
+  if (isNaN(parsedIssueDate.getTime()) || isNaN(parsedExpiryDate.getTime())) {
+    return res.status(400).json({ success: false, error: 'Invalid date format. Please use YYYY-MM-DD' });
+  }
+
+  // Pre-validate Numbers
+  if (isNaN(Number(sumInsured)) || isNaN(Number(annualPremium))) {
+    return res.status(400).json({ success: false, error: 'Sum Insured and Annual Premium must be valid numbers' });
   }
 
   try {
@@ -43,7 +90,14 @@ router.post('/policy', async (req, res) => {
     });
   } catch (err) {
     console.error('[Policy] Error adding policy:', err);
-    res.status(500).json({ success: false, error: 'Failed to add policy' });
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Policy number already exists' });
+    }
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ success: false, error: messages.join(', ') });
+    }
+    res.status(500).json({ success: false, error: 'Failed to add policy: ' + err.message });
   }
 });
 
@@ -172,6 +226,28 @@ router.put('/client/:mobile', async (req, res) => {
   } catch (err) {
     console.error('[Policy] Error updating client:', err);
     res.status(500).json({ success: false, error: 'Failed to update client' });
+  }
+});
+
+// PUT /policy/:id → update a policy
+router.put('/policy/:id', upload.single('document'), async (req, res) => {
+  const { id } = req.params;
+  const updateData = { ...req.body };
+  
+  if (req.file) {
+    updateData.attachedDocument = req.file.filename;
+  }
+
+  try {
+    const updated = await Policy.findByIdAndUpdate(id, updateData, { new: true });
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Policy not found' });
+    }
+    console.log(`[Policy] Policy updated: ${id}`);
+    res.status(200).json({ success: true, data: updated });
+  } catch (err) {
+    console.error('[Policy] Error updating policy:', err);
+    res.status(500).json({ success: false, error: 'Failed to update policy' });
   }
 });
 

@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Phone, MessageCircle, Mail, Clock, MapPin, Globe } from 'lucide-react-native';
 import { useTheme } from '../theme';
 
 export default function ContactAgentScreen() {
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleCall = () => {
@@ -36,7 +38,7 @@ export default function ContactAgentScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -97,7 +99,7 @@ export default function ContactAgentScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

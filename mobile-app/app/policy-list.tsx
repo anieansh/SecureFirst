@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, FlatList, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, ChevronDown, FileText, ExternalLink, Calendar, Shield, Info } from 'lucide-react-native';
 import { useAuth } from './_layout';
@@ -10,6 +11,7 @@ import { API_ENDPOINTS } from '../constants/api';
 export default function PolicyListScreen() {
   const { filter: initialFilter } = useLocalSearchParams();
   const { userMobile } = useAuth();
+  const insets = useSafeAreaInsets();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -118,7 +120,7 @@ export default function PolicyListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -163,7 +165,7 @@ export default function PolicyListScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

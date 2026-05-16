@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, User, Mail, Phone, MapPin, Save } from 'lucide-react-native';
 import { useAuth } from '../_layout';
@@ -14,6 +15,7 @@ const API_URL = API_ENDPOINTS.POLICIES;
 export default function PersonalDetailsScreen() {
   const { userMobile, userName: contextName, userEmail: contextEmail } = useAuth();
   const colors = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [name, setName] = useState(contextName || '');
@@ -62,7 +64,7 @@ export default function PersonalDetailsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={24} color={colors.textPrimary} />
@@ -87,7 +89,7 @@ export default function PersonalDetailsScreen() {
           <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

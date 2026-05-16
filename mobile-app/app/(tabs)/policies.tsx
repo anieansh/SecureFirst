@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../_layout';
 import apiClient from '../../utils/apiClient';
 import { ShieldAlert } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../theme';
 
-import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
@@ -15,6 +15,7 @@ export default function PoliciesScreen() {
   const { userMobile } = useAuth();
   const [policies, setPolicies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -36,7 +37,7 @@ export default function PoliciesScreen() {
   }, [userMobile]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>All Policies</Text>
       </View>
@@ -95,7 +96,7 @@ export default function PoliciesScreen() {
           })
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

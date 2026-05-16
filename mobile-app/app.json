@@ -57,7 +57,15 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SecureFirst to save your policy documents.",
+          "savePhotosPermission": "Allow SecureFirst to save your policy documents.",
+          "isWriteOnly": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

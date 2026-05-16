@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../_layout';
 import apiClient from '../../utils/apiClient';
 import { ShieldAlert, ArrowRight, Phone, MessageCircle, Mail } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../theme';
-import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
@@ -14,6 +14,7 @@ const API_URL = API_ENDPOINTS.POLICIES;
 
 export default function HomeScreen() {
   const { userMobile, userName } = useAuth();
+  const insets = useSafeAreaInsets();
   const [policies, setPolicies] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function HomeScreen() {
   }, [userMobile]);
 
   const now = new Date();
-  
+
   const activeCount = policies.filter(p => (new Date(p.expiryDate).getTime() - now.getTime()) > 15 * 86400000).length;
   const expiringCount = policies.filter(p => {
     const diff = new Date(p.expiryDate).getTime() - now.getTime();
@@ -54,9 +55,11 @@ export default function HomeScreen() {
   validPolicies.sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
   const nearestPolicy = validPolicies[0];
 
+  const nearestDiffDays = nearestPolicy ? Math.ceil((new Date(nearestPolicy.expiryDate).getTime() - now.getTime()) / 86400000) : null;
+
   const StatCard = ({ label, count, filter, color }: any) => (
-    <TouchableOpacity 
-      style={styles.statBox} 
+    <TouchableOpacity
+      style={styles.statBox}
       onPress={() => router.push({ pathname: '/policy-list', params: { filter } })}
     >
       <Text style={styles.statLabel}>{label}</Text>
@@ -65,8 +68,8 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 24, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -79,7 +82,7 @@ export default function HomeScreen() {
         {loading ? (
           <ActivityIndicator size="large" color={colors.accentGold} style={{ marginTop: 40 }} />
         ) : (
-          <>
+          <View>
             <View style={styles.statsGrid}>
               <StatCard label="Total" count={policies.length} filter="Total" />
               <StatCard label="Active" count={activeCount} filter="Active" color={colors.accentSuccess} />
@@ -124,48 +127,49 @@ export default function HomeScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-            
+
             {policies.length === 0 && (
               <Text style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 20 }}>No policies found.</Text>
             )}
-
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Action Button for Support */}
-      <View style={styles.fabContainer}>
+      <View style={[styles.fabContainer, { bottom: 25 }]}>
         {isFABOpen && (
-          <View style={styles.fabMenu}>
-            <View style={styles.timingBox}>
-              <Text style={styles.timingText}>Shop Hours: Mon-Sat, 9am-7pm</Text>
+            <View style={styles.fabMenu}>
+              <View style={styles.timingBox}>
+                <Text style={styles.timingText}>Shop Hours: Mon-Sat, 9am-7pm</Text>
+              </View>
+
+              <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('tel:8343000065')}>
+                <Phone size={20} color={colors.accentGold} />
+                <Text style={styles.menuText}>Call Us</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://wa.me/918343000065')}>
+                <MessageCircle size={20} color={colors.accentGold} />
+                <Text style={styles.menuText}>WhatsApp</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('mailto:Support@securefirst.co')}>
+                <Mail size={20} color={colors.accentGold} />
+                <Text style={styles.menuText}>Email</Text>
+              </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('tel:8343000065')}>
-              <Phone size={20} color={colors.accentGold} />
-              <Text style={styles.menuText}>Call Us</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://wa.me/918343000065')}>
-              <MessageCircle size={20} color={colors.accentGold} />
-              <Text style={styles.menuText}>WhatsApp</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('mailto:Support@securefirst.co')}>
-              <Mail size={20} color={colors.accentGold} />
-              <Text style={styles.menuText}>Email</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        <TouchableOpacity 
-          style={styles.fabTrigger} 
-          onPress={() => setIsFABOpen(!isFABOpen)}
-          activeOpacity={0.8}
-        >
-          <Phone size={28} color={colors.bgPrimary} />
-          <Text style={styles.fabLabel}>Support</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          )}
+
+          <TouchableOpacity
+            style={styles.fabTrigger}
+            onPress={() => setIsFABOpen(!isFABOpen)}
+            activeOpacity={0.8}
+          >
+            <Phone size={28} color={colors.bgPrimary} />
+            <Text style={styles.fabLabel}>Support</Text>
+          </TouchableOpacity>
+        </View>
+    </View>
   );
 }
 
@@ -191,7 +195,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   policyNumber: { fontSize: 15, color: colors.textSecondary, fontWeight: '600' },
   
   // FAB Styles
-  fabContainer: { position: 'absolute', bottom: 30, right: 20, alignItems: 'flex-end' },
+  fabContainer: { position: 'absolute', bottom: 100, right: 20, alignItems: 'flex-end' },
   fabTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.accentGold, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 30, shadowColor: colors.accentGold, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 12 },
   fabLabel: { color: colors.bgPrimary, fontWeight: '900', fontSize: 16 },
   fabMenu: { backgroundColor: colors.bgSecondary, borderRadius: 24, padding: 12, marginBottom: 15, borderWidth: 1, borderColor: colors.borderLight, shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 15, width: 220 },

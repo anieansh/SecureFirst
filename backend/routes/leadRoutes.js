@@ -92,4 +92,53 @@ router.post('/leads', upload.fields([
   }
 });
 
+// DELETE /leads/:id
+router.delete('/leads/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const lead = await Lead.findByIdAndDelete(id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+    res.status(200).json({ success: true, message: 'Lead deleted successfully' });
+  } catch (err) {
+    console.error('[Lead] Error deleting lead:', err);
+    res.status(500).json({ success: false, error: 'Failed to delete lead' });
+  }
+});
+
+// PUT /leads/:id
+router.put('/leads/:id', upload.fields([
+  { name: 'rcImage', maxCount: 1 },
+  { name: 'previousPolicyImage', maxCount: 1 }
+]), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { name, mobileNumber, policyType, carCondition, carName, exShowroomPrice, vehicleNumber } = req.body;
+    
+    const updateData = {
+      name,
+      mobileNumber,
+      policyType,
+      carCondition,
+      carName,
+      exShowroomPrice,
+      vehicleNumber
+    };
+
+    if (req.files && req.files['rcImage']) {
+      updateData.rcImagePath = `/uploads/${req.files['rcImage'][0].filename}`;
+    }
+    if (req.files && req.files['previousPolicyImage']) {
+      updateData.previousPolicyPath = `/uploads/${req.files['previousPolicyImage'][0].filename}`;
+    }
+
+    const lead = await Lead.findByIdAndUpdate(id, updateData, { new: true });
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+    
+    res.status(200).json({ success: true, data: lead });
+  } catch (error) {
+    console.error('[Lead] Error updating lead:', error);
+    res.status(500).json({ success: false, error: 'Failed to update lead' });
+  }
+});
+
 module.exports = router;
