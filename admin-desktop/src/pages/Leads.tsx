@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, PlusCircle, X, ShieldCheck, Edit3, Trash2, MoreVertical, FilePlus } from 'lucide-react';
+import { Search, PlusCircle, X, Edit3, Trash2, MoreVertical, FilePlus } from 'lucide-react';
 
 const API_URL = 'https://api.securefirst.co/api/leads';
 const POLICY_API = 'https://api.securefirst.co/api/policy';
@@ -13,7 +13,6 @@ const Leads = () => {
 
   // Policy Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<any>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     clientName: '',
@@ -67,7 +66,6 @@ const Leads = () => {
   }, []);
 
   const handleAddPolicy = (lead: any) => {
-    setSelectedLead(lead);
     setDocumentFile(null);
     setFormData({
       clientName: lead.name,

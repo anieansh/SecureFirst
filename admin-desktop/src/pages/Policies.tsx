@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Filter, Search, Trash2, Edit3, X, ShieldCheck, PlusCircle } from 'lucide-react';
+import { Filter, Search, Trash2, Edit3, X, PlusCircle } from 'lucide-react';
 
 const API_URL = 'https://api.securefirst.co/api/policies';
 const POLICY_API_BASE = 'https://api.securefirst.co/api/policy';
