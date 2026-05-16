@@ -2,13 +2,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../_layout';
-import { ArrowLeft, Download, Clock } from 'lucide-react-native';
+import { ArrowLeft, Download, RefreshCcw, Shield, Calendar, CreditCard, User, Hash, FileUp, FileCheck } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import apiClient from '../../utils/apiClient';
-
-import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import apiClient from '../../utils/apiClient';
 import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
@@ -18,6 +18,9 @@ export default function PolicyDetailsScreen() {
   const { userMobile } = useAuth();
   const [policy, setPolicy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [rcImage, setRcImage] = useState<any>(null);
+  const [previousPolicyImage, setPreviousPolicyImage] = useState<any>(null);
+  const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -99,18 +102,98 @@ export default function PolicyDetailsScreen() {
     }
   };
 
-  const handleRenewal = async () => {
+  const handlePickDocument = async (setDoc: (doc: any) => void) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/jpeg', 'image/png', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setDoc(result.assets[0]);
+      }
+    } catch (err) {
+      console.error('Error picking document', err);
+    }
+  };
+
+  const handlePickImage = async (setDoc: (doc: any) => void, useCamera: boolean) => {
+    try {
+      const permissionResult = useCamera 
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permissionResult.granted === false) {
+        alert(`Permission to access ${useCamera ? 'camera' : 'gallery'} is required!`);
+        return;
+      }
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.7 })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.7,
+          });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setDoc({
+          uri: asset.uri,
+          name: asset.fileName || (useCamera ? 'camera_image.jpg' : 'gallery_image.jpg'),
+          mimeType: 'image/jpeg',
+          size: asset.fileSize
+        });
+      }
+    } catch (err) {
+      console.error('Error picking image', err);
+    }
+  };
+
+  const handleUploadSource = (setDoc: (doc: any) => void) => {
+    const options = [
+      { text: 'Take Photo', onPress: () => handlePickImage(setDoc, true) },
+      { text: 'Choose from Gallery', onPress: () => handlePickImage(setDoc, false) },
+      { text: 'Select Document (PDF/Files)', onPress: () => handlePickDocument(setDoc) },
+      { text: 'Cancel', style: 'cancel' }
+    ];
+    Alert.alert('Select Upload Source', 'Choose how you want to upload the document', options as any);
+  };
+
+  const handleRenewal = async (withDocs: boolean) => {
     try {
       setLoading(true);
-      await apiClient.post(API_ENDPOINTS.LEADS, {
-        name: policy.clientName,
-        mobileNumber: userMobile,
-        policyType: policy.policyType,
-        carCondition: policy.policyType === 'Motor' ? 'Old' : undefined,
-        vehicleNumber: policy.vehicleNumber,
-        notes: `Renewal request for Policy #${policy.policyNumber}`
+      const formData = new FormData();
+      formData.append('name', policy.clientName);
+      formData.append('mobileNumber', userMobile || '');
+      formData.append('policyType', policy.policyType);
+      formData.append('carCondition', policy.policyType === 'Motor' ? 'Old' : undefined);
+      formData.append('vehicleNumber', policy.vehicleNumber || '');
+      formData.append('notes', `Renewal request for Policy #${policy.policyNumber}`);
+
+      if (withDocs) {
+        if (rcImage) {
+          formData.append('rcImage', {
+            uri: rcImage.uri,
+            name: rcImage.name || 'rcImage.jpg',
+            type: rcImage.mimeType || 'image/jpeg'
+          } as any);
+        }
+        if (previousPolicyImage) {
+          formData.append('previousPolicyImage', {
+            uri: previousPolicyImage.uri,
+            name: previousPolicyImage.name || 'prevPolicy.jpg',
+            type: previousPolicyImage.mimeType || 'image/jpeg'
+          } as any);
+        }
+      }
+
+      await apiClient.post(API_ENDPOINTS.LEADS, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       
+      setIsRenewalModalOpen(false);
+      setRcImage(null);
+      setPreviousPolicyImage(null);
       Alert.alert('Success', 'Your renewal request has been submitted. Our agent will contact you soon.');
     } catch (err) {
       console.error('Renewal error:', err);
@@ -178,9 +261,12 @@ export default function PolicyDetailsScreen() {
         </View>
 
         <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleRenewal}>
-            <Clock size={20} color={colors.bgPrimary} />
-            <Text style={styles.primaryBtnText}>Request Renewal</Text>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: colors.bgSecondary }]} 
+            onPress={() => setIsRenewalModalOpen(true)}
+          >
+            <RefreshCcw size={22} color={colors.accentGold} />
+            <Text style={[styles.actionBtnText, { color: colors.accentGold }]}>Request Renewal</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.secondaryBtn} onPress={handleDownload}>
@@ -190,6 +276,64 @@ export default function PolicyDetailsScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Renewal Modal */}
+      {isRenewalModalOpen && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Renewal Request</Text>
+            <Text style={styles.modalDesc}>Do you have the RC or previous policy document? Uploading them helps us process your renewal faster.</Text>
+            
+            <View style={styles.uploadSection}>
+              <TouchableOpacity style={styles.uploadRow} onPress={() => handleUploadSource(setRcImage)}>
+                <View style={styles.uploadIconBox}>
+                  {rcImage ? <FileCheck size={20} color={colors.accentSuccess} /> : <FileUp size={20} color={colors.textSecondary} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.uploadLabel}>RC Document</Text>
+                  <Text style={[styles.uploadStatus, rcImage && { color: colors.accentSuccess }]}>
+                    {rcImage ? rcImage.name : 'Not selected'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.uploadRow} onPress={() => handleUploadSource(setPreviousPolicyImage)}>
+                <View style={styles.uploadIconBox}>
+                  {previousPolicyImage ? <FileCheck size={20} color={colors.accentSuccess} /> : <FileUp size={20} color={colors.textSecondary} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.uploadLabel}>Previous Policy</Text>
+                  <Text style={[styles.uploadStatus, previousPolicyImage && { color: colors.accentSuccess }]}>
+                    {previousPolicyImage ? previousPolicyImage.name : 'Not selected'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelBtn} 
+                onPress={() => {
+                  setIsRenewalModalOpen(false);
+                  setRcImage(null);
+                  setPreviousPolicyImage(null);
+                }}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.confirmBtn} 
+                onPress={() => handleRenewal(!!(rcImage || previousPolicyImage))}
+              >
+                <Text style={styles.confirmBtnText}>
+                  {(rcImage || previousPolicyImage) ? 'Upload & Send' : 'Send Without Docs'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -214,8 +358,24 @@ const createStyles = (colors: any) => StyleSheet.create({
   detailLabel: { color: colors.textSecondary, fontSize: 13, marginBottom: 8, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   detailValue: { color: colors.textPrimary, fontSize: 20, fontWeight: '900' },
   actionSection: { marginTop: 14, gap: 16, paddingBottom: 40 },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentGold, paddingVertical: 20, borderRadius: 20, gap: 10, shadowColor: colors.accentGold, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
-  primaryBtnText: { color: colors.bgPrimary, fontSize: 18, fontWeight: '900' },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, borderRadius: 20, borderWidth: 2, borderColor: colors.accentGold, gap: 10 },
+  actionBtnText: { fontSize: 15, fontWeight: '800' },
   secondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bgSecondary, paddingVertical: 20, borderRadius: 20, borderWidth: 2, borderColor: colors.borderLight, gap: 10 },
-  secondaryBtnText: { color: colors.accentGold, fontSize: 18, fontWeight: '800' }
+  secondaryBtnText: { color: colors.accentGold, fontSize: 18, fontWeight: '800' },
+
+  // Modal Styles
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 1000 },
+  modalContent: { width: '100%', backgroundColor: '#1A1A1A', borderRadius: 32, padding: 24, borderWidth: 1, borderColor: '#333' },
+  modalTitle: { fontSize: 24, fontWeight: '900', color: '#FFF', marginBottom: 12 },
+  modalDesc: { fontSize: 15, color: '#AAA', lineHeight: 22, marginBottom: 24 },
+  uploadSection: { gap: 16, marginBottom: 32 },
+  uploadRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', padding: 16, borderRadius: 20, borderWidth: 1, borderColor: '#333', gap: 16 },
+  uploadIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#222', alignItems: 'center', justifyContent: 'center' },
+  uploadLabel: { fontSize: 14, fontWeight: '800', color: '#FFF', textTransform: 'uppercase', letterSpacing: 1 },
+  uploadStatus: { fontSize: 13, color: '#666', marginTop: 2 },
+  modalActions: { flexDirection: 'row', gap: 12 },
+  cancelBtn: { flex: 1, paddingVertical: 18, borderRadius: 20, backgroundColor: '#222', alignItems: 'center' },
+  cancelBtnText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
+  confirmBtn: { flex: 2, paddingVertical: 18, borderRadius: 20, backgroundColor: colors.accentGold, alignItems: 'center' },
+  confirmBtnText: { color: '#000', fontWeight: '900', fontSize: 16 },
 });

@@ -44,6 +44,9 @@ const leadSchema = new mongoose.Schema({
   },
   previousPolicyPath: {
     type: String,
+  },
+  notes: {
+    type: String,
   }
 }, { timestamps: true });
 

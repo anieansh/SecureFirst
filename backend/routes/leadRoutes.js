@@ -35,6 +35,18 @@ router.get('/leads', async (req, res) => {
   }
 });
 
+// GET /leads/:mobile → get leads by mobile (Mobile App)
+router.get('/leads/:mobile', async (req, res) => {
+  const { mobile } = req.params;
+  try {
+    const leads = await Lead.find({ mobileNumber: mobile }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: leads });
+  } catch (err) {
+    console.error('[Lead] Error fetching user leads:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch user leads' });
+  }
+});
+
 // POST /leads
 router.post('/leads', upload.fields([
   { name: 'rcImage', maxCount: 1 },

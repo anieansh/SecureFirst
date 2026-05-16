@@ -15,25 +15,28 @@ const API_URL = API_ENDPOINTS.POLICIES;
 export default function HomeScreen() {
   const { userMobile, userName } = useAuth();
   const [policies, setPolicies] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFABOpen, setIsFABOpen] = useState(false);
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
-    const fetchPolicies = async () => {
+    const fetchData = async () => {
       try {
-        const res = await apiClient.get(`${API_URL}/${userMobile}`);
-        const data = res.data.data || res.data;
-        if (data) {
-          setPolicies(data);
-        }
+        const [pRes, lRes] = await Promise.all([
+          apiClient.get(`${API_ENDPOINTS.POLICIES}/${userMobile}`),
+          apiClient.get(`${API_ENDPOINTS.LEADS}/${userMobile}`)
+        ]);
+        setPolicies(pRes.data.data || pRes.data || []);
+        setLeads(lRes.data.data || lRes.data || []);
       } catch (err) {
         console.error('Failed to fetch:', err);
       } finally {
         setLoading(false);
       }
     };
-    if (userMobile) fetchPolicies();
+    if (userMobile) fetchData();
   }, [userMobile]);
 
   const now = new Date();
@@ -43,12 +46,23 @@ export default function HomeScreen() {
     const diff = new Date(p.expiryDate).getTime() - now.getTime();
     return diff > 0 && diff <= 15 * 86400000;
   }).length;
+  const expiredCount = policies.filter(p => new Date(p.expiryDate).getTime() <= now.getTime()).length;
+  const requestedCount = leads.length; // All leads are requests
+  const rejectedCount = leads.filter(l => l.status === 'Rejected').length;
 
   const validPolicies = policies.filter(p => new Date(p.expiryDate).getTime() > now.getTime());
   validPolicies.sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
   const nearestPolicy = validPolicies[0];
 
-  const nearestDiffDays = nearestPolicy ? Math.ceil((new Date(nearestPolicy.expiryDate).getTime() - now.getTime()) / 86400000) : null;
+  const StatCard = ({ label, count, filter, color }: any) => (
+    <TouchableOpacity 
+      style={styles.statBox} 
+      onPress={() => router.push({ pathname: '/policy-list', params: { filter } })}
+    >
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: color || colors.textPrimary }]}>{count}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -67,18 +81,15 @@ export default function HomeScreen() {
         ) : (
           <>
             <View style={styles.statsGrid}>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Total</Text>
-                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{policies.length}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Active</Text>
-                <Text style={[styles.statValue, { color: colors.accentSuccess }]}>{activeCount}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Expiring</Text>
-                <Text style={[styles.statValue, { color: colors.accentWarning }]}>{expiringCount}</Text>
-              </View>
+              <StatCard label="Total" count={policies.length} filter="Total" />
+              <StatCard label="Active" count={activeCount} filter="Active" color={colors.accentSuccess} />
+              <StatCard label="Expiring" count={expiringCount} filter="Expiring" color={colors.accentWarning} />
+            </View>
+
+            <View style={styles.statsGrid}>
+              <StatCard label="Expired" count={expiredCount} filter="Expired" color={colors.accentDanger} />
+              <StatCard label="Requested" count={requestedCount} filter="Requested" color={colors.accentGold} />
+              <StatCard label="Rejected" count={rejectedCount} filter="Rejected" color="#888" />
             </View>
 
             {nearestPolicy && nearestDiffDays !== null && nearestDiffDays <= 30 && (
@@ -118,28 +129,42 @@ export default function HomeScreen() {
               <Text style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 20 }}>No policies found.</Text>
             )}
 
-            {/* Contact Support */}
-            <View style={styles.supportCard}>
-              <Text style={styles.supportTitle}>Contact Support</Text>
-              <Text style={styles.supportSubtitle}>Mon–Sat, 9am–7pm</Text>
-              <View style={styles.supportActions}>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('tel:8343000065').catch(() => Alert.alert('Unable to open dialer'))}>
-                  <Phone size={24} color={colors.accentGold} />
-                  <Text style={styles.supportBtnText} numberOfLines={1}>Call Us</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('https://wa.me/918343000065?text=Hello, I need help with my policy.').catch(() => Alert.alert('WhatsApp not installed'))}>
-                  <MessageCircle size={24} color={colors.accentGold} />
-                  <Text style={styles.supportBtnText} numberOfLines={1}>WhatsApp</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.supportBtn} onPress={() => Linking.openURL('mailto:Support@securefirst.co?subject=Policy Support').catch(() => Alert.alert('Unable to open mail'))}>
-                  <Mail size={24} color={colors.accentGold} />
-                  <Text style={styles.supportBtnText} numberOfLines={1}>Email</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
       </ScrollView>
+
+      {/* Floating Action Button for Support */}
+      <View style={styles.fabContainer}>
+        {isFABOpen && (
+          <View style={styles.fabMenu}>
+            <View style={styles.timingBox}>
+              <Text style={styles.timingText}>Shop Hours: Mon-Sat, 9am-7pm</Text>
+            </View>
+            
+            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('tel:8343000065')}>
+              <Phone size={20} color={colors.accentGold} />
+              <Text style={styles.menuText}>Call Us</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('https://wa.me/918343000065')}>
+              <MessageCircle size={20} color={colors.accentGold} />
+              <Text style={styles.menuText}>WhatsApp</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.menuItem} onPress={() => Linking.openURL('mailto:Support@securefirst.co')}>
+              <Mail size={20} color={colors.accentGold} />
+              <Text style={styles.menuText}>Email</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        <TouchableOpacity 
+          style={styles.fabTrigger} 
+          onPress={() => setIsFABOpen(!isFABOpen)}
+          activeOpacity={0.8}
+        >
+          <Phone size={28} color={colors.bgPrimary} />
+          <Text style={styles.fabLabel}>Support</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -164,10 +189,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   policyName: { fontSize: 19, fontWeight: '800', color: colors.textPrimary },
   policyNumber: { fontSize: 15, color: colors.textSecondary, fontWeight: '600' },
-  supportCard: { marginTop: 32, marginBottom: 28, backgroundColor: colors.bgSecondary, borderRadius: 28, padding: 22, borderWidth: 1, borderColor: colors.borderLight },
-  supportTitle: { fontSize: 20, fontWeight: '900', color: colors.textPrimary, marginBottom: 4, letterSpacing: -0.5 },
-  supportSubtitle: { fontSize: 13, color: colors.textSecondary, fontWeight: '500', marginBottom: 20 },
-  supportActions: { flexDirection: 'row', gap: 8 },
-  supportBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.bgPrimary, paddingVertical: 16, paddingHorizontal: 4, borderRadius: 18, borderWidth: 1, borderColor: colors.borderLight },
-  supportBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: '800', textAlign: 'center' }
+  
+  // FAB Styles
+  fabContainer: { position: 'absolute', bottom: 30, right: 20, alignItems: 'flex-end' },
+  fabTrigger: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.accentGold, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 30, shadowColor: colors.accentGold, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 12 },
+  fabLabel: { color: colors.bgPrimary, fontWeight: '900', fontSize: 16 },
+  fabMenu: { backgroundColor: colors.bgSecondary, borderRadius: 24, padding: 12, marginBottom: 15, borderWidth: 1, borderColor: colors.borderLight, shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 15, width: 220 },
+  timingBox: { paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.borderLight, marginBottom: 8, alignItems: 'center' },
+  timingText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 8 },
+  menuText: { color: colors.textPrimary, fontWeight: '800', fontSize: 15 },
 });

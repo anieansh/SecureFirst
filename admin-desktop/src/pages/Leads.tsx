@@ -76,6 +76,7 @@ const Leads = () => {
                         <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
                           <div><span style={{color: 'var(--text-secondary)'}}>Model:</span> {l.carName || '-'}</div>
                           <div><span style={{color: 'var(--text-secondary)'}}>Price:</span> {l.exShowroomPrice ? `₹${l.exShowroomPrice}` : '-'}</div>
+                          {l.notes && <div style={{ marginTop: '4px', fontStyle: 'italic', color: 'var(--accent-gold)' }}>{l.notes}</div>}
                         </div>
                       ) : l.carCondition === 'Old' ? (
                         <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
@@ -85,9 +86,12 @@ const Leads = () => {
                             {l.previousPolicyPath && <a href={`https://api.securefirst.co${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
                             {!l.rcImagePath && !l.previousPolicyPath && <span style={{color: 'var(--text-secondary)'}}>No Docs</span>}
                           </div>
+                          {l.notes && <div style={{ marginTop: '4px', fontStyle: 'italic', color: 'var(--accent-gold)' }}>{l.notes}</div>}
                         </div>
                       ) : (
-                        '-'
+                        <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
+                          {l.notes || '-'}
+                        </div>
                       )}
                     </td>
                     <td>{new Date(l.createdAt).toLocaleDateString()}</td>
