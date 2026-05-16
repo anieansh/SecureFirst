@@ -2,15 +2,17 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const admin = require('firebase-admin');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'securefirst-secret-key-2026';
 
 try {
-  // Try to initialize with service account key if it exists
   const serviceAccount = require('../serviceAccountKey.json');
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
 } catch (e) {
-  // For verifying ID tokens, we only strictly need the project ID.
   console.log('[Mobile Auth] Warning: serviceAccountKey.json not found, initializing with projectId only.');
   try {
     admin.initializeApp({
@@ -21,255 +23,303 @@ try {
   }
 }
 
-// In-memory user store for mobile app users
-let users = [];
+// Helper to generate JWT
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id, mobile: user.mobile },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+};
 
-// In-memory OTP store: { mobile: { otp, expiresAt } }
 let otpStore = {};
 
-// Helper: find user by mobile
-const findUser = (mobile) => users.find(u => u.mobile === mobile);
-
-// POST /check-user — Check if a mobile number is already registered
-router.post('/check-user', (req, res) => {
+// POST /check-user
+router.post('/check-user', async (req, res) => {
   const { mobile } = req.body;
   if (!mobile) {
-    return res.status(400).json({ error: 'Mobile number is required' });
+    return res.status(400).json({ success: false, error: 'Mobile number is required' });
   }
-  const user = findUser(mobile);
-  return res.json({ exists: !!user, name: user ? user.name : null });
+  try {
+    const user = await User.findOne({ mobile });
+    return res.json({ 
+      success: true, 
+      data: { exists: !!user, name: user ? user.name : null } 
+    });
+  } catch (err) {
+    console.error('[Mobile Auth] Check user error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to check user' });
+  }
 });
 
-// POST /register — Register a new mobile app user
+// POST /register
 router.post('/register', async (req, res) => {
   const { mobile, email, password, name } = req.body;
 
   if (!mobile || !email || !password || !name) {
-    return res.status(400).json({ error: 'All fields are required (mobile, email, password, name)' });
-  }
-
-  if (findUser(mobile)) {
-    return res.status(409).json({ error: 'User with this mobile number already exists' });
+    return res.status(400).json({ success: false, error: 'All fields are required' });
   }
 
   try {
+    const existingUser = await User.findOne({ mobile });
+    if (existingUser) {
+      return res.status(409).json({ success: false, error: 'User already exists' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
+    const newUser = new User({
       mobile,
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      name: name.trim(),
-      createdAt: new Date().toISOString()
-    };
-    users.push(newUser);
+      name: name.trim()
+    });
+    
+    await newUser.save();
+    const token = generateToken(newUser);
 
-    console.log(`[Mobile Auth] New user registered: ${mobile} (${name})`);
+    console.log(`[Mobile Auth] New user registered: ${mobile}`);
     return res.status(201).json({
       success: true,
-      user: { mobile: newUser.mobile, email: newUser.email, name: newUser.name }
+      data: {
+        userId: newUser._id,
+        token,
+        user: { mobile: newUser.mobile, email: newUser.email, name: newUser.name }
+      }
     });
   } catch (err) {
     console.error('[Mobile Auth] Registration error:', err);
-    return res.status(500).json({ error: 'Registration failed' });
+    return res.status(500).json({ success: false, error: 'Registration failed' });
   }
 });
 
-// POST /login — Login with mobile + password
+// POST /login
 router.post('/login', async (req, res) => {
   const { mobile, password } = req.body;
 
   if (!mobile || !password) {
-    return res.status(400).json({ error: 'Mobile and password are required' });
-  }
-
-  const user = findUser(mobile);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found. Please register first.' });
+    return res.status(400).json({ success: false, error: 'Mobile and password are required' });
   }
 
   try {
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Incorrect password' });
+    const user = await User.findOne({ mobile });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
     }
 
+    if (!user.password) {
+      return res.status(401).json({ success: false, error: 'Please login using Firebase/OTP' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Incorrect password' });
+    }
+
+    const token = generateToken(user);
     console.log(`[Mobile Auth] User logged in: ${mobile}`);
     return res.json({
       success: true,
-      user: { mobile: user.mobile, email: user.email, name: user.name }
+      data: {
+        userId: user._id,
+        token,
+        user: { mobile: user.mobile, email: user.email, name: user.name }
+      }
     });
   } catch (err) {
     console.error('[Mobile Auth] Login error:', err);
-    return res.status(500).json({ error: 'Login failed' });
+    return res.status(500).json({ success: false, error: 'Login failed' });
   }
 });
 
-// POST /forgot-password — Send OTP to user's registered email (simulated)
-router.post('/forgot-password', (req, res) => {
+// POST /forgot-password
+router.post('/forgot-password', async (req, res) => {
   const { mobile } = req.body;
-
   if (!mobile) {
-    return res.status(400).json({ error: 'Mobile number is required' });
+    return res.status(400).json({ success: false, error: 'Mobile number is required' });
   }
-
-  const user = findUser(mobile);
-  if (!user) {
-    return res.status(404).json({ error: 'No account found with this mobile number' });
+  try {
+    const user = await User.findOne({ mobile });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore[mobile] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+    const maskedEmail = user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+    return res.json({
+      success: true,
+      data: { message: `OTP sent to ${maskedEmail}`, maskedEmail }
+    });
+  } catch (err) {
+    console.error('[Mobile Auth] Forgot password error:', err);
+    return res.status(500).json({ success: false, error: 'Process failed' });
   }
-
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[mobile] = {
-    otp,
-    expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
-  };
-
-  // Simulate email sending (log to console)
-  const maskedEmail = user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-  console.log(`\n========================================`);
-  console.log(`  PASSWORD RESET OTP for ${mobile}`);
-  console.log(`  Email: ${user.email}`);
-  console.log(`  OTP: ${otp}`);
-  console.log(`  Expires in: 10 minutes`);
-  console.log(`========================================\n`);
-
-  return res.json({
-    success: true,
-    message: `OTP sent to ${maskedEmail}`,
-    maskedEmail
-  });
 });
 
-// POST /verify-reset-otp — Verify the OTP code
+// POST /verify-reset-otp
 router.post('/verify-reset-otp', (req, res) => {
   const { mobile, otp } = req.body;
-
   if (!mobile || !otp) {
-    return res.status(400).json({ error: 'Mobile and OTP are required' });
+    return res.status(400).json({ success: false, error: 'Mobile and OTP are required' });
   }
-
   const stored = otpStore[mobile];
-  if (!stored) {
-    return res.status(400).json({ error: 'No OTP requested for this number. Please request again.' });
+  if (!stored || Date.now() > stored.expiresAt || stored.otp !== otp) {
+    return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
   }
-
-  if (Date.now() > stored.expiresAt) {
-    delete otpStore[mobile];
-    return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-  }
-
-  if (stored.otp !== otp) {
-    return res.status(400).json({ error: 'Invalid OTP. Please try again.' });
-  }
-
-  return res.json({ success: true, message: 'OTP verified' });
+  return res.json({ success: true, data: { message: 'OTP verified' } });
 });
 
-// POST /reset-password — Reset password after OTP verification
+// POST /reset-password
 router.post('/reset-password', async (req, res) => {
   const { mobile, otp, newPassword } = req.body;
-
-  if (!mobile || !otp || !newPassword) {
-    return res.status(400).json({ error: 'Mobile, OTP, and new password are required' });
-  }
-
-  // Re-verify OTP
   const stored = otpStore[mobile];
   if (!stored || stored.otp !== otp || Date.now() > stored.expiresAt) {
-    return res.status(400).json({ error: 'Invalid or expired OTP' });
+    return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
   }
-
-  const user = findUser(mobile);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
   try {
+    const user = await User.findOne({ mobile });
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     user.password = await bcrypt.hash(newPassword, 10);
-    delete otpStore[mobile]; // Clear used OTP
-
-    console.log(`[Mobile Auth] Password reset for: ${mobile}`);
-    return res.json({ success: true, message: 'Password reset successful' });
+    await user.save();
+    delete otpStore[mobile];
+    return res.json({ success: true, data: { message: 'Password reset successful' } });
   } catch (err) {
     console.error('[Mobile Auth] Reset password error:', err);
-    return res.status(500).json({ error: 'Failed to reset password' });
+    return res.status(500).json({ success: false, error: 'Failed to reset password' });
   }
 });
 
-// POST /change-password — Change password (when logged in)
+// POST /change-password
 router.post('/change-password', async (req, res) => {
   const { mobile, currentPassword, newPassword } = req.body;
-
-  if (!mobile || !currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
-
-  const user = findUser(mobile);
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-
   try {
+    const user = await User.findOne({ mobile });
+    if (!user || !user.password) return res.status(404).json({ success: false, error: 'User not found or no password set' });
     const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-
+    if (!isMatch) return res.status(401).json({ success: false, error: 'Incorrect current password' });
     user.password = await bcrypt.hash(newPassword, 10);
-    console.log(`[Mobile Auth] Password changed for: ${mobile}`);
-    return res.json({ success: true, message: 'Password changed successfully' });
+    await user.save();
+    return res.json({ success: true, data: { message: 'Password changed successfully' } });
   } catch (err) {
     console.error('[Mobile Auth] Change password error:', err);
-    return res.status(500).json({ error: 'Failed to change password' });
+    return res.status(500).json({ success: false, error: 'Failed to change password' });
   }
 });
 
-// POST /firebase-login — Verify Firebase OTP and login/register
-router.post('/firebase-login', async (req, res) => {
-  const { idToken, name, email } = req.body;
+// POST /verify-otp-firebase (Existing User Login)
+router.post('/verify-otp-firebase', async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) return res.status(400).json({ success: false, error: 'ID Token is required' });
   
-  if (!idToken) {
-    return res.status(400).json({ error: 'ID Token is required' });
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    let mobile = decodedToken.phone_number; 
+    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
+    
+    let user = await User.findOne({ mobile });
+    if (!user) {
+      // If user not found in DB but OTP verified, we need them to go to signup
+      // But this endpoint is specifically for existing users.
+      return res.status(404).json({ success: false, error: 'User record not found in database. Please signup.' });
+    }
+
+    if (!user.firebaseUid) {
+      user.firebaseUid = decodedToken.uid;
+      await user.save();
+    }
+
+    const token = generateToken(user);
+    console.log(`[Mobile Auth] Existing user verified OTP: ${mobile}`);
+    return res.json({
+      success: true,
+      data: {
+        userId: user._id,
+        token,
+        user: { mobile: user.mobile, email: user.email, name: user.name }
+      }
+    });
+  } catch (error) {
+    console.error('[Mobile Auth] OTP Verification error:', error);
+    return res.status(401).json({ success: false, error: 'Invalid token' });
+  }
+});
+
+// POST /register-firebase (New User Signup)
+router.post('/register-firebase', async (req, res) => {
+  const { idToken, name, email } = req.body;
+  if (!idToken || !name || !email) {
+    return res.status(400).json({ success: false, error: 'Token, name and email are required' });
   }
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    // Note: Firebase includes the country code in phone_number.
-    // E.g., +919999999999. If your local DB stores it without +91, 
-    // you may need to strip it: decodedToken.phone_number.replace('+91', '')
     let mobile = decodedToken.phone_number; 
-    
-    // Simple strip if starts with +91 (Assuming India numbers for now)
-    if (mobile.startsWith('+91')) {
-      mobile = mobile.replace('+91', '');
-    }
+    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
 
-    if (!mobile) {
-      return res.status(400).json({ error: 'Token does not contain a phone number' });
-    }
-
-    let user = findUser(mobile);
-    if (!user) {
-      // Auto-register if not exists
-      user = {
+    let user = await User.findOne({ mobile });
+    if (user) {
+      // Update existing user if they somehow hit register
+      user.name = name.trim();
+      user.email = email.toLowerCase().trim();
+      user.firebaseUid = decodedToken.uid;
+    } else {
+      user = new User({
         mobile,
-        email: email || '',
-        name: name || 'SecureFirst User',
-        createdAt: new Date().toISOString()
-      };
-      users.push(user);
-      console.log(`[Mobile Auth] New user registered via Firebase: ${mobile}`);
+        email: email.toLowerCase().trim(),
+        name: name.trim(),
+        firebaseUid: decodedToken.uid
+      });
+    }
+    
+    await user.save();
+    const token = generateToken(user);
+
+    console.log(`[Mobile Auth] New user registered via OTP: ${mobile}`);
+    return res.status(201).json({
+      success: true,
+      data: {
+        userId: user._id,
+        token,
+        user: { mobile: user.mobile, email: user.email, name: user.name }
+      }
+    });
+  } catch (error) {
+    console.error('[Mobile Auth] Registration error:', error);
+    return res.status(401).json({ success: false, error: 'Invalid token' });
+  }
+});
+
+// POST /firebase-login (Legacy/Combined)
+router.post('/firebase-login', async (req, res) => {
+  const { idToken, name, email } = req.body;
+  if (!idToken) return res.status(400).json({ success: false, error: 'ID Token is required' });
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    let mobile = decodedToken.phone_number; 
+    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
+    if (!mobile) return res.status(400).json({ success: false, error: 'Token missing phone number' });
+
+    let user = await User.findOne({ mobile });
+    if (!user) {
+      user = new User({ mobile, email: email || '', name: name || 'SecureFirst User', firebaseUid: decodedToken.uid });
+      await user.save();
+    } else if (!user.firebaseUid) {
+      user.firebaseUid = decodedToken.uid;
+      await user.save();
     }
 
+    const token = generateToken(user);
     console.log(`[Mobile Auth] User logged in via Firebase: ${mobile}`);
     return res.json({
       success: true,
-      user: { mobile: user.mobile, email: user.email, name: user.name }
+      data: {
+        userId: user._id,
+        token,
+        user: { mobile: user.mobile, email: user.email, name: user.name }
+      }
     });
-
   } catch (error) {
-    console.error('[Mobile Auth] Firebase token verification error:', error);
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    console.error('[Mobile Auth] Firebase error:', error);
+    return res.status(401).json({ success: false, error: 'Invalid token' });
   }
 });
 

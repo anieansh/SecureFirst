@@ -9,41 +9,19 @@ import { useTheme, useThemeMode } from '../theme';
 import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
-const API_URL = API_ENDPOINTS.POLICY;
+const API_URL = API_ENDPOINTS.POLICIES;
 
-import { getDummyPolicies } from '../dummyData';
+
 
 export default function ProfileScreen() {
   const { userMobile, userEmail, userName: contextName, logout } = useAuth();
-  const [userName, setUserName] = useState(contextName || 'Client');
+  const userName = contextName || 'Client';
   const colors = useTheme();
   const { isDark, toggleTheme } = useThemeMode();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  useEffect(() => {
-    // Use name from AuthContext if available, otherwise fetch from policies
-    if (contextName) {
-      setUserName(contextName);
-      return;
-    }
-    const fetchInfo = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
-        let policies = res.data;
-        if (!policies || policies.length === 0) policies = getDummyPolicies(userMobile);
-        if (policies.length > 0) {
-          setUserName(policies[0].clientName);
-        }
-      } catch (err) {
-        setUserName(getDummyPolicies(userMobile)[0].clientName);
-      }
-    };
-    if (userMobile) fetchInfo();
-  }, [userMobile, contextName]);
-
   const handleSignOut = () => {
     logout();
-    router.replace('/');
   };
 
   const menuItems = [

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export const API_BASE = 'https://api.securefirst.co/api';
+export const API_BASE_URL = API_BASE;
 export const API_KEY = '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a92';
 
 // Shared axios instance with security headers
@@ -23,7 +24,11 @@ api.interceptors.request.use((config) => {
 
 // Handle global errors (like 401 Authentication Required)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`[API Response] ${response.config.url}:`, response.status);
+    console.log(`[API Data]`, JSON.stringify(response.data, null, 2).substring(0, 500) + (JSON.stringify(response.data).length > 500 ? '...' : ''));
+    return response;
+  },
   (error) => {
     console.error(`[API Error] ${error.config?.url}:`, error.response?.data || error.message);
     return Promise.reject(error);

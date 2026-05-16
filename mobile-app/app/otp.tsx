@@ -9,9 +9,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
 import { auth } from '../utils/firebase';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
-import { API_ENDPOINTS, api } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 
 const AUTH_URL = API_ENDPOINTS.AUTH;
 
@@ -60,16 +60,14 @@ export default function OTPScreen() {
         // Go to signup screen to collect name/email
         router.replace({ pathname: '/signup', params: { mobile, idToken } });
       } else {
-        // Existing user, send ID Token to our backend to login
-        const res = await api.post(`${AUTH_URL}/firebase-login`, {
-          idToken,
-          email: '', 
-          name: '' 
+        // Existing user, verify with backend
+        const res = await apiClient.post(`${AUTH_URL}/verify-otp-firebase`, {
+          idToken
         });
 
         if (res.data.success) {
-          const { email: userEmail, name: userName, mobile: userMobile } = res.data.user;
-          login(userMobile, userEmail, userName);
+          const { user, token: userToken } = res.data.data;
+          login(user.mobile, user.email, user.name, userToken);
           router.replace('/(tabs)/home');
         }
       }

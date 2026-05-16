@@ -1,15 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../_layout';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 import { ShieldAlert, Info } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
-const API_URL = API_ENDPOINTS.POLICY;
-
-import { getDummyPolicies } from '../dummyData';
+const API_URL = API_ENDPOINTS.POLICIES;
 
 export default function AlertsScreen() {
   const { userMobile } = useAuth();
@@ -22,11 +20,10 @@ export default function AlertsScreen() {
     // We mock notifications based on policies for now since backend /notifications doesn't exist
     const fetchAlerts = async () => {
       try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
-        let policies = res.data;
-        if (!policies || policies.length === 0) {
-          policies = getDummyPolicies(userMobile);
-        }
+        const res = await apiClient.get(`${API_URL}/${userMobile}`);
+        const data = res.data.data || res.data;
+        const policies = data || [];
+        
         const now = new Date();
         
         const generatedAlerts: any[] = [];

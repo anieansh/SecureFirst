@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../_layout';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 import { ShieldAlert } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../theme';
@@ -9,9 +9,7 @@ import { useTheme } from '../theme';
 import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
-const API_URL = API_ENDPOINTS.POLICY;
-
-import { getDummyPolicies } from '../dummyData';
+const API_URL = API_ENDPOINTS.POLICIES;
 
 export default function PoliciesScreen() {
   const { userMobile } = useAuth();
@@ -23,15 +21,13 @@ export default function PoliciesScreen() {
   useEffect(() => {
     const fetchPolicies = async () => {
       try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
-        if (res.data && res.data.length > 0) {
-          setPolicies(res.data);
-        } else {
-          setPolicies(getDummyPolicies(userMobile));
+        const res = await apiClient.get(`${API_URL}/${userMobile}`);
+        const data = res.data.data || res.data;
+        if (data) {
+          setPolicies(data);
         }
       } catch (err) {
         console.error(err);
-        setPolicies(getDummyPolicies(userMobile));
       } finally {
         setLoading(false);
       }

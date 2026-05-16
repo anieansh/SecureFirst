@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '../_layout';
-import axios from 'axios';
 import { ArrowLeft, Download, Clock } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import apiClient from '../../utils/apiClient';
 
 import { Platform } from 'react-native';
-import { API_ENDPOINTS, api } from '../../constants/api';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
-
-
-import { getDummyPolicies } from '../dummyData';
 
 export default function PolicyDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -25,16 +24,14 @@ export default function PolicyDetailsScreen() {
   useEffect(() => {
     const fetchPolicy = async () => {
       try {
-        const res = await api.get(`${API_URL}/${userMobile}`);
-        let policies = res.data;
-        if (!policies || policies.length === 0) policies = getDummyPolicies(userMobile);
+        const res = await apiClient.get(`${API_URL}/${userMobile}`);
+        const data = res.data.data || res.data;
+        const policies = data || [];
         
         const found = policies.find((p: any) => p._id === id);
         if (found) setPolicy(found);
       } catch (err) {
         console.error(err);
-        const fb = getDummyPolicies(userMobile).find((p: any) => p._id === id);
-        if (fb) setPolicy(fb);
       } finally {
         setLoading(false);
       }
@@ -79,12 +76,48 @@ export default function PolicyDetailsScreen() {
     statusColor = colors.accentWarning;
   }
 
-  const handleDownload = () => {
-    alert(`Downloading ${policy.attachedDocument || 'Policy_Document.pdf'}`);
+  const handleDownload = async () => {
+    if (!policy.attachedDocument) return;
+    
+    try {
+      setLoading(true);
+      const fileUrl = `https://api.securefirst.co/uploads/${policy.attachedDocument}`;
+      const fileUri = `${FileSystem.documentDirectory}${policy.attachedDocument}`;
+      
+      const downloadRes = await FileSystem.downloadAsync(fileUrl, fileUri);
+      
+      if (downloadRes.status === 200) {
+        await Sharing.shareAsync(downloadRes.uri);
+      } else {
+        Alert.alert('Download Failed', 'Could not download the document from the server.');
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+      Alert.alert('Error', 'An error occurred while downloading the policy document.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRenewal = () => {
-    alert(`Renewal request sent for ${policy.policyNumber}`);
+  const handleRenewal = async () => {
+    try {
+      setLoading(true);
+      await apiClient.post(API_ENDPOINTS.LEADS, {
+        name: policy.clientName,
+        mobileNumber: userMobile,
+        policyType: policy.policyType,
+        carCondition: policy.policyType === 'Motor' ? 'Old' : undefined,
+        vehicleNumber: policy.vehicleNumber,
+        notes: `Renewal request for Policy #${policy.policyNumber}`
+      });
+      
+      Alert.alert('Success', 'Your renewal request has been submitted. Our agent will contact you soon.');
+    } catch (err) {
+      console.error('Renewal error:', err);
+      Alert.alert('Error', 'Could not submit renewal request. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

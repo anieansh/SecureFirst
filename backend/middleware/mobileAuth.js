@@ -21,7 +21,7 @@ const requireMobileUser = (req, res, next) => {
   }
 
   console.warn(`[Mobile Security] Access denied for ${req.url} from ${req.ip}`);
-  return res.status(401).json({ error: 'Authentication required' });
+  return res.status(401).json({ success: false, error: 'Authentication required' });
 };
 
 module.exports = requireMobileUser;

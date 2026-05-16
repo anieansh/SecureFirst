@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, ActivityIndicator, Linking, Alert } from 'react-native';
 import { useAuth } from '../_layout';
-import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 import { ShieldAlert, ArrowRight, Phone, MessageCircle, Mail } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../theme';
 import { Platform } from 'react-native';
-import { API_ENDPOINTS, api } from '../../constants/api';
+import { API_ENDPOINTS } from '../../constants/api';
 
 const API_URL = API_ENDPOINTS.POLICIES;
 
-import { getDummyPolicies } from '../dummyData';
+
 
 export default function HomeScreen() {
-  const { userMobile } = useAuth();
+  const { userMobile, userName } = useAuth();
   const [policies, setPolicies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const colors = useTheme();
@@ -22,15 +22,13 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchPolicies = async () => {
       try {
-        const res = await api.get(`${API_URL}/${userMobile}`);
-        if (res.data && res.data.length > 0) {
-          setPolicies(res.data);
-        } else {
-          setPolicies(getDummyPolicies(userMobile));
+        const res = await apiClient.get(`${API_URL}/${userMobile}`);
+        const data = res.data.data || res.data;
+        if (data) {
+          setPolicies(data);
         }
       } catch (err) {
         console.error('Failed to fetch:', err);
-        setPolicies(getDummyPolicies(userMobile));
       } finally {
         setLoading(false);
       }
@@ -61,7 +59,7 @@ export default function HomeScreen() {
         bounces={true}
         alwaysBounceVertical={true}
       >
-        <Text style={styles.greeting}>Hello, {policies[0]?.clientName?.split(' ')[0] || 'Client'}</Text>
+        <Text style={styles.greeting}>Hello, {userName?.split(' ')[0] || 'Client'}</Text>
         <Text style={styles.subGreeting}>Welcome back to SecureFirst</Text>
 
         {loading ? (

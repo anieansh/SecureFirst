@@ -7,9 +7,9 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
-import { API_ENDPOINTS, api } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 
 const AUTH_URL = API_ENDPOINTS.AUTH;
 
@@ -35,15 +35,15 @@ export default function SignupScreen() {
 
     try {
       // Send ID Token to our backend to create user
-      const res = await api.post(`${AUTH_URL}/firebase-login`, {
+      const res = await apiClient.post(`${AUTH_URL}/register-firebase`, {
         idToken,
         email: email.trim(), 
         name: name.trim() 
       });
 
       if (res.data.success) {
-        const { email: userEmail, name: userName, mobile: userMobile } = res.data.user;
-        login(userMobile, userEmail, userName);
+        const { user, token: userToken } = res.data.data;
+        login(user.mobile, user.email, user.name, userToken);
         router.replace('/(tabs)/home');
       }
     } catch (err: any) {

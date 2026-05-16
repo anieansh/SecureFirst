@@ -4,7 +4,7 @@ import { Shield, Lock, KeyRound } from 'lucide-react';
 import axios from 'axios';
 import './Login.css';
 
-const API_URL = 'http://localhost:5001/api/auth';
+const API_URL = 'https://api.securefirst.co/api/auth';
 
 const Login = () => {
   const [step, setStep] = useState(1); // 1: Password, 2: Setup MFA, 3: Verify MFA

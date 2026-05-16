@@ -5,7 +5,7 @@ const apiKeyAuth = (req, res, next) => {
 
   if (!providedKey || providedKey !== API_KEY) {
     console.warn(`[Security] Blocked request from ${req.ip} - Missing or invalid API Key`);
-    return res.status(401).json({ error: 'API key required' });
+    return res.status(401).json({ success: false, error: 'API key required' });
   }
 
   next();

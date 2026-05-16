@@ -1,13 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, ScrollView, Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, CheckCircle, FileUp, FileCheck } from 'lucide-react-native';
 import axios from 'axios';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import apiClient from '../utils/apiClient';
 
-import { API_ENDPOINTS, api } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 
 const API_URL = API_ENDPOINTS.LEADS;
 
@@ -44,6 +46,53 @@ export default function NewPolicyScreen() {
     } catch (err) {
       console.error('Error picking document', err);
     }
+  };
+
+  const handlePickImage = async (setDoc: (doc: any) => void, useCamera: boolean) => {
+    try {
+      const permissionResult = useCamera 
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permissionResult.granted === false) {
+        alert(`Permission to access ${useCamera ? 'camera' : 'gallery'} is required!`);
+        return;
+      }
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            quality: 0.7,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.7,
+          });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setDoc({
+          uri: asset.uri,
+          name: asset.fileName || (useCamera ? 'camera_image.jpg' : 'gallery_image.jpg'),
+          mimeType: 'image/jpeg',
+          size: asset.fileSize
+        });
+      }
+    } catch (err) {
+      console.error('Error picking image', err);
+    }
+  };
+
+  const handleUploadSource = (setDoc: (doc: any) => void) => {
+    const options = [
+      { text: 'Take Photo', onPress: () => handlePickImage(setDoc, true) },
+      { text: 'Choose from Gallery', onPress: () => handlePickImage(setDoc, false) },
+      { text: 'Select Document (PDF/Files)', onPress: () => handlePickDocument(setDoc) },
+      { text: 'Cancel', style: 'cancel' }
+    ];
+
+    Alert.alert('Select Upload Source', 'Choose how you want to upload the document', options as any);
   };
 
   const handleSubmit = async () => {
@@ -97,7 +146,7 @@ export default function NewPolicyScreen() {
         }
       }
 
-      await api.post(API_URL, formData, {
+      await apiClient.post(API_URL, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -211,7 +260,7 @@ export default function NewPolicyScreen() {
                 />
 
                 <Text style={styles.label}>Upload RC (PNG, JPG, PDF)</Text>
-                <TouchableOpacity style={styles.uploadWidget} onPress={() => handlePickDocument(setRcImage)}>
+                <TouchableOpacity style={styles.uploadWidget} onPress={() => handleUploadSource(setRcImage)}>
                   {rcImage ? (
                     <View style={styles.uploadContent}>
                       <FileCheck size={28} color={colors.accentSuccess} />
@@ -226,7 +275,7 @@ export default function NewPolicyScreen() {
                 </TouchableOpacity>
 
                 <Text style={styles.label}>Previous Policy (If Any)</Text>
-                <TouchableOpacity style={styles.uploadWidget} onPress={() => handlePickDocument(setPreviousPolicyImage)}>
+                <TouchableOpacity style={styles.uploadWidget} onPress={() => handleUploadSource(setPreviousPolicyImage)}>
                   {previousPolicyImage ? (
                     <View style={styles.uploadContent}>
                       <FileCheck size={28} color={colors.accentSuccess} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, Save } from 'lucide-react';
 
 const Settings = () => {
@@ -7,12 +8,14 @@ const Settings = () => {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
 
+  const navigate = useNavigate();
   const handleSave = () => {
     alert("Settings saved successfully!");
   }
 
   const handleSignOut = () => {
-    alert("Signing out...");
+    localStorage.removeItem('adminToken');
+    navigate('/login');
   }
 
   const Switch = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (

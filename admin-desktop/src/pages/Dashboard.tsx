@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Users, FileCheck, AlertTriangle, ShieldX, IndianRupee, Car } from 'lucide-react';
 
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://api.securefirst.co/api';
 
 const Dashboard = () => {
   const [policies, setPolicies] = useState<any[]>([]);
@@ -16,8 +16,8 @@ const Dashboard = () => {
           axios.get(`${API_URL}/policies`),
           axios.get(`${API_URL}/clients`)
         ]);
-        setPolicies(polRes.data);
-        setClients(cliRes.data);
+        setPolicies(polRes.data.data || polRes.data);
+        setClients(cliRes.data.data || cliRes.data);
       } catch (err) {
         console.error('Error fetching dashboard data', err);
       } finally {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { PlusCircle, X } from 'lucide-react';
 
-const API_URL = 'http://localhost:5001/api/policy';
+const API_URL = 'https://api.securefirst.co/api/policy';
 
 interface AddPolicyModalProps {
   isOpen: boolean;

@@ -49,6 +49,10 @@ const policySchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  attachedDocument: {
+    type: String,
+    required: true,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Policy', policySchema);

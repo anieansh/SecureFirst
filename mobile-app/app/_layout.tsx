@@ -1,35 +1,37 @@
 // import '@react-native-firebase/app';
 import '../utils/firebase';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { View, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Linking, Platform, StyleSheet } from 'react-native';
 import { useTheme, ThemeProvider } from './theme';
 import { clearBiometricCredentials } from '../utils/biometrics';
 import Constants from 'expo-constants';
-import axios from 'axios';
 import { ShieldAlert } from 'lucide-react-native';
+import { storage } from '../utils/storage';
+import apiClient from '../utils/apiClient';
 
-import { API_ENDPOINTS, api } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 
-const API_URL = API_ENDPOINTS.CONFIG;
-
+const CONFIG_URL = API_ENDPOINTS.CONFIG;
 
 export const AuthContext = createContext<{
   userMobile: string;
   userEmail: string;
   userName: string;
+  token: string;
   confirmationObj: any;
   setConfirmationObj: (obj: any) => void;
-  login: (mobile: string, email?: string, name?: string) => void;
+  login: (mobile: string, email: string, name: string, token: string) => void;
   logout: () => void;
 }>({
   userMobile: '',
   userEmail: '',
   userName: '',
+  token: '',
   confirmationObj: null,
-  setConfirmationObj: () => {},
-  login: () => {},
-  logout: () => {},
+  setConfirmationObj: () => { },
+  login: () => { },
+  logout: () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -51,8 +53,9 @@ function RootApp() {
   const [userMobile, setUserMobile] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
+  const [token, setToken] = useState('');
   const [confirmationObj, setConfirmationObj] = useState<any>(null);
-  
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [needsUpdate, setNeedsUpdate] = useState(false);
   const [updateUrl, setUpdateUrl] = useState('');
@@ -60,39 +63,59 @@ function RootApp() {
   const colors = useTheme();
 
   useEffect(() => {
-    checkAppVersion();
+    initAuthAndCheckVersion();
   }, []);
 
-  const checkAppVersion = async () => {
+  const initAuthAndCheckVersion = async () => {
     try {
-      const res = await api.get(`${API_URL}/version`);
-      const { minimumAppVersion, updateUrls } = res.data;
-      
+      // 1. Check storage for existing session
+      const savedUser = await storage.getUser();
+      const savedToken = await storage.getToken();
+      if (savedUser && savedToken) {
+        setUserMobile(savedUser.mobile);
+        setUserEmail(savedUser.email);
+        setUserName(savedUser.name);
+        setToken(savedToken);
+        console.log('[Auth] Restored session for:', savedUser.mobile);
+      }
+
+      // 2. Check app version
+      const res = await apiClient.get(`${CONFIG_URL}/version`);
+      const { minimumAppVersion, updateUrls } = res.data.data || res.data;
+
       const currentVersion = Constants.expoConfig?.version || '1.0.0';
-      
+
       if (isVersionLower(currentVersion, minimumAppVersion)) {
         // App is not live yet, so disable the update popup
         // setNeedsUpdate(true);
         // setUpdateUrl(Platform.OS === 'ios' ? updateUrls.ios : updateUrls.android);
       }
     } catch (error) {
-      console.warn("Failed to check app version:", error);
+      console.warn("Init process warning:", error);
     } finally {
       setIsLoaded(true);
     }
   };
 
-  const login = (mobile: string, email?: string, name?: string) => {
+  const login = async (mobile: string, email: string, name: string, userToken: string) => {
     setUserMobile(mobile);
-    if (email) setUserEmail(email);
-    if (name) setUserName(name);
+    setUserEmail(email);
+    setUserName(name);
+    setToken(userToken);
+
+    await storage.saveUser({ mobile, email, name });
+    await storage.saveToken(userToken);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUserMobile('');
     setUserEmail('');
     setUserName('');
+    setToken('');
+
+    await storage.clearAll();
     clearBiometricCredentials();
+    router.replace('/');
   };
 
   if (!isLoaded) {
@@ -108,7 +131,7 @@ function RootApp() {
           <Text style={[styles.updateText, { color: colors.textSecondary }]}>
             A new version of SecureFirst is available. You must update to the latest version to continue using the app securely.
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.updateBtn, { backgroundColor: colors.accentGold }]}
             onPress={() => Linking.openURL(updateUrl).catch(() => alert('Failed to open app store'))}
           >
@@ -120,10 +143,11 @@ function RootApp() {
   }
 
   return (
-    <AuthContext.Provider value={{ userMobile, userEmail, userName, confirmationObj, setConfirmationObj, login, logout }}>
+    <AuthContext.Provider value={{ userMobile, userEmail, userName, token, confirmationObj, setConfirmationObj, login, logout }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="otp" />
+        <Stack.Screen name="signup" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="policy/[id]" />
       </Stack>
@@ -177,3 +201,4 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+

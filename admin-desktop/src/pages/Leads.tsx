@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search } from 'lucide-react';
 
-const API_URL = 'http://localhost:5001/api/leads';
+const API_URL = 'https://api.securefirst.co/api/leads';
 
 const Leads = () => {
   const [leads, setLeads] = useState<any[]>([]);
@@ -13,7 +13,7 @@ const Leads = () => {
     const fetchLeads = async () => {
       try {
         const res = await axios.get(API_URL);
-        setLeads(res.data);
+        setLeads(res.data.data || res.data);
       } catch (err) {
         console.error('Error fetching leads', err);
       } finally {
@@ -73,16 +73,16 @@ const Leads = () => {
                     <td>{l.carCondition || '-'}</td>
                     <td>
                       {l.carCondition === 'New' ? (
-                        <div style={{ fontSize: '0.85rem' }}>
+                        <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
                           <div><span style={{color: 'var(--text-secondary)'}}>Model:</span> {l.carName || '-'}</div>
                           <div><span style={{color: 'var(--text-secondary)'}}>Price:</span> {l.exShowroomPrice ? `₹${l.exShowroomPrice}` : '-'}</div>
                         </div>
                       ) : l.carCondition === 'Old' ? (
-                        <div style={{ fontSize: '0.85rem' }}>
+                        <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>
                           {l.vehicleNumber && <div><span style={{color: 'var(--text-secondary)'}}>Reg No:</span> <strong style={{color: 'var(--accent-gold)'}}>{l.vehicleNumber}</strong></div>}
-                          <div className="flex gap-2" style={{ marginTop: l.vehicleNumber ? '4px' : 0 }}>
-                            {l.rcImagePath && <a href={`http://localhost:5001${l.rcImagePath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>RC Doc</a>}
-                            {l.previousPolicyPath && <a href={`http://localhost:5001${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
+                          <div className="flex gap-2" style={{ marginTop: l.vehicleNumber ? '4px' : 0, justifyContent: 'center' }}>
+                            {l.rcImagePath && <a href={`https://api.securefirst.co${l.rcImagePath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>RC Doc</a>}
+                            {l.previousPolicyPath && <a href={`https://api.securefirst.co${l.previousPolicyPath}`} target="_blank" rel="noreferrer" style={{color: 'var(--accent-gold)', textDecoration: 'underline'}}>Prev Policy</a>}
                             {!l.rcImagePath && !l.previousPolicyPath && <span style={{color: 'var(--text-secondary)'}}>No Docs</span>}
                           </div>
                         </div>

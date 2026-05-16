@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView,
   StatusBar, ActivityIndicator, useColorScheme, KeyboardAvoidingView,
@@ -11,9 +11,9 @@ import { useTheme } from './theme';
 import { auth, app, firebase } from '../utils/firebase';
 import { signInWithPhoneNumber } from 'firebase/auth';
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
-import { API_ENDPOINTS, api } from '../constants/api';
+import { API_ENDPOINTS } from '../constants/api';
 
 const AUTH_URL = API_ENDPOINTS.AUTH;
 
@@ -28,7 +28,7 @@ const firebaseConfig = {
 };
 
 export default function LoginScreen() {
-  const { setConfirmationObj } = useAuth();
+  const { setConfirmationObj, token } = useAuth();
   const scheme = useColorScheme();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -39,6 +39,13 @@ export default function LoginScreen() {
 
   const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      router.replace('/(tabs)/home');
+    }
+  }, [token]);
 
   const handleSendOtp = async () => {
     if (mobile.length < 10) {
@@ -53,8 +60,8 @@ export default function LoginScreen() {
     setError('');
     try {
       // Check if user is new
-      const res = await api.post(`${AUTH_URL}/check-user`, { mobile });
-      const isNewUser = !res.data.exists;
+      const res = await apiClient.post(`${AUTH_URL}/check-user`, { mobile });
+      const isNewUser = !res.data.data.exists;
 
       const phoneNumber = `+91${mobile}`; // Defaulting to India code
       

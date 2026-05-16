@@ -4,44 +4,38 @@ import { router } from 'expo-router';
 import { ArrowLeft, User, Mail, Phone, MapPin, Save } from 'lucide-react-native';
 import { useAuth } from '../_layout';
 import { useTheme } from '../theme';
-import { getDummyPolicies } from '../dummyData';
-import axios from 'axios';
-import { Platform } from 'react-native';
+import apiClient from '../../utils/apiClient';
 
+import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../../constants/api';
 
-const API_URL = API_ENDPOINTS.POLICY;
+const API_URL = API_ENDPOINTS.POLICIES;
 
 export default function PersonalDetailsScreen() {
-  const { userMobile } = useAuth();
+  const { userMobile, userName: contextName, userEmail: contextEmail } = useAuth();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(contextName || '');
+  const [email, setEmail] = useState(contextEmail || '');
   const [address, setAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchInfo = async () => {
       try {
-        const res = await axios.get(`${API_URL}/${userMobile}`);
-        let policies = res.data;
-        if (!policies || policies.length === 0) policies = getDummyPolicies(userMobile);
-        if (policies.length > 0) {
-          setName(policies[0].clientName || '');
-          setEmail(policies[0].clientEmail || '');
+        const res = await apiClient.get(`${API_URL}/${userMobile}`);
+        const data = res.data.data || res.data;
+        if (data && data.length > 0) {
+          setName(data[0].clientName || contextName || '');
+          setEmail(data[0].clientEmail || contextEmail || '');
         }
-      } catch {
-        const dummy = getDummyPolicies(userMobile);
-        if (dummy.length > 0) {
-          setName(dummy[0].clientName || '');
-          setEmail(dummy[0].clientEmail || '');
-        }
+      } catch (err) {
+        console.error('Fetch info error:', err);
       }
     };
     if (userMobile) fetchInfo();
-  }, [userMobile]);
+  }, [userMobile, contextName, contextEmail]);
 
   const handleSave = () => {
     setSaving(true);

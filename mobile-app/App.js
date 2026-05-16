@@ -16,7 +16,7 @@ import { ShieldCheck, CalendarClock, ShieldAlert, LogOut } from 'lucide-react-na
 
 // For Android emulator replace localhost with 10.0.2.2.
 // For physical device, use the local IP of the machine running the backend (e.g., 192.168.x.x).
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:5001/api/policy' : 'http://10.0.2.2:5001/api/policy';
+const API_URL = 'https://api.securefirst.co/api/policy';
 
 export default function App() {
   const [userMobile, setUserMobile] = useState('');
