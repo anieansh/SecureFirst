@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, ShieldCheck, Fingerprint, Lock, Eye, EyeOff, ScanFace, KeyRound } from 'lucide-react-native';
+import { ArrowLeft, ShieldCheck, Fingerprint, Lock, Eye, EyeOff, ScanFace, KeyRound, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { useAuth } from '../_layout';
 import { Platform } from 'react-native';
 import axios from 'axios';
+import apiClient from '../../utils/apiClient';
 import {
   isBiometricAvailable,
   getBiometricType,
@@ -23,7 +24,7 @@ export default function SecurityScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { userMobile } = useAuth();
+  const { userMobile, logout } = useAuth();
 
   const [biometrics, setBiometrics] = useState(false);
   const [biometricType, setBiometricType] = useState('Biometric');
@@ -36,6 +37,7 @@ export default function SecurityScreen() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     checkBiometricState();
@@ -134,6 +136,45 @@ export default function SecurityScreen() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account permanently?',
+      'Are you sure you want to delete your account? This will permanently delete your profile, policies, leads, and all associated data. This action is completely IRREVERSIBLE.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const res = await apiClient.post('/mobile-auth/delete-account');
+              if (res.data.success) {
+                Alert.alert(
+                  'Account Deleted',
+                  'Your account and data have been successfully deleted.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        logout();
+                      }
+                    }
+                  ],
+                  { cancelable: false }
+                );
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.response?.data?.error || 'Failed to delete account. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const BiometricRow = () => (
     <View style={styles.row}>
       <View style={styles.rowLeft}>
@@ -171,7 +212,7 @@ export default function SecurityScreen() {
         <View style={styles.shieldBanner}>
           <ShieldCheck size={44} color={colors.accentSuccess} />
           <Text style={styles.shieldText}>Your account is secure</Text>
-          <Text style={styles.shieldSub}>Password-protected with encryption</Text>
+          <Text style={styles.shieldSub}>OTP-verified with secure authentication</Text>
         </View>
 
         {biometricAvail && (
@@ -183,6 +224,7 @@ export default function SecurityScreen() {
           </>
         )}
 
+        {/* 
         <Text style={styles.sectionLabel}>Password</Text>
         <View style={styles.card}>
           {!showChangePassword ? (
@@ -243,6 +285,27 @@ export default function SecurityScreen() {
               </View>
             </View>
           )}
+        </View>
+        */}
+
+        <Text style={styles.sectionLabel}>Account Actions</Text>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.actionRow} onPress={handleDeleteAccount} disabled={deleting}>
+            <View style={styles.rowLeft}>
+              <View style={[styles.iconWrap, { backgroundColor: 'rgba(234,67,53,0.1)' }]}>
+                <Trash2 size={20} color={colors.accentDanger} />
+              </View>
+              <View>
+                <Text style={[styles.rowLabel, { color: colors.accentDanger }]}>Delete Account</Text>
+                <Text style={styles.rowSub}>Permanently delete all your data</Text>
+              </View>
+            </View>
+            {deleting ? (
+              <ActivityIndicator color={colors.accentDanger} size="small" />
+            ) : (
+              <Text style={[styles.actionLink, { color: colors.accentDanger }]}>Delete →</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

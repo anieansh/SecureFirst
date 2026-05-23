@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { generateSecret, verify } = require('otplib');
 const qrcode = require('qrcode');
+const admin = require('firebase-admin');
+const User = require('../models/User');
+const Policy = require('../models/Policy');
+const Lead = require('../models/Lead');
 
 // In-memory admin settings
 let adminAuth = {
@@ -67,6 +71,83 @@ router.post('/verify-mfa', (req, res) => {
     return res.json({ success: true, authToken: 'fake-jwt-token-for-admin' });
   } else {
     return res.status(400).json({ error: 'Invalid authenticator code' });
+  }
+});
+
+// POST /delete-account-web (Web portal Firebase OTP Soft Delete)
+router.post('/delete-account-web', async (req, res) => {
+  const { idToken } = req.body;
+  if (!idToken) {
+    return res.status(400).json({ success: false, error: 'Firebase ID Token is required' });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    let mobile = decodedToken.phone_number;
+    if (!mobile) {
+      return res.status(400).json({ success: false, error: 'Token missing phone number' });
+    }
+
+    if (mobile.startsWith('+91')) {
+      mobile = mobile.replace('+91', '');
+    }
+
+    const user = await User.findOne({ mobile, isDeleted: { $ne: true } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'No active account found for this phone number.' });
+    }
+
+    const timestamp = Date.now();
+    const originalMobile = user.mobile;
+    const originalEmail = user.email;
+    const originalUid = user.firebaseUid || decodedToken.uid;
+
+    // 1. Soft delete the User by renaming unique fields & setting flags
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    user.mobile = `${originalMobile}_deleted_${timestamp}`;
+    user.email = `${originalEmail}_deleted_${timestamp}`;
+    user.firebaseUid = `${originalUid}_deleted_${timestamp}`;
+    await user.save();
+
+    // 2. Soft delete Policy records
+    await Policy.updateMany(
+      { mobileNumber: originalMobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${originalMobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    // 3. Soft delete Lead records
+    await Lead.updateMany(
+      { mobileNumber: originalMobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${originalMobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    // 4. Delete Firebase Auth User credential
+    try {
+      await admin.auth().deleteUser(decodedToken.uid);
+      console.log(`[Auth Web] Deleted Firebase User Auth record for: ${decodedToken.uid}`);
+    } catch (fbErr) {
+      console.error(`[Auth Web] Firebase User Auth deletion warning:`, fbErr.message);
+    }
+
+    console.log(`[Auth Web] Account successfully soft-deleted via web for mobile: ${originalMobile}`);
+    return res.json({ success: true, message: 'Your account and associated data have been deleted successfully.' });
+
+  } catch (err) {
+    console.error('[Auth Web] Web delete account error:', err);
+    return res.status(401).json({ success: false, error: 'Invalid or expired verification token' });
   }
 });
 

@@ -27,7 +27,7 @@ const upload = multer({ storage: storage });
 // GET /leads
 router.get('/leads', async (req, res) => {
   try {
-    const leads = await Lead.find().sort({ createdAt: -1 });
+    const leads = await Lead.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: leads });
   } catch (err) {
     console.error('[Lead] Error fetching leads:', err);
@@ -39,7 +39,7 @@ router.get('/leads', async (req, res) => {
 router.get('/leads/:mobile', async (req, res) => {
   const { mobile } = req.params;
   try {
-    const leads = await Lead.find({ mobileNumber: mobile }).sort({ createdAt: -1 });
+    const leads = await Lead.find({ mobileNumber: mobile, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: leads });
   } catch (err) {
     console.error('[Lead] Error fetching user leads:', err);

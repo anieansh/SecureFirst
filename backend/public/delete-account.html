@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Account | SecureFirst</title>
+  
+  <!-- Modern premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #0f1115;
+      --bg-secondary: #1a1d24;
+      --text-primary: #ffffff;
+      --text-secondary: #a0aab2;
+      --accent-teal: #1dd3b0;
+      --accent-danger: #ea4335;
+      --accent-success: #34a853;
+      --border-color: #2a2e3b;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* Animated background glow */
+    .bg-glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(29, 211, 176, 0.08) 0%, rgba(0,0,0,0) 70%);
+      top: -100px;
+      right: -100px;
+      z-index: 1;
+      pointer-events: none;
+      animation: drift 15s infinite alternate ease-in-out;
+    }
+
+    .bg-glow-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(234, 67, 53, 0.05) 0%, rgba(0,0,0,0) 70%);
+      bottom: -150px;
+      left: -150px;
+      z-index: 1;
+      pointer-events: none;
+      animation: drift 20s infinite alternate-reverse ease-in-out;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(50px, 50px) scale(1.1); }
+    }
+
+    /* Glassmorphic portal card */
+    .portal-card {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 28px;
+      padding: 40px;
+      box-shadow: 0 20px 40px var(--shadow-color);
+      transform: translateY(20px);
+      opacity: 0;
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Branding & Header */
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background-color: rgba(29, 211, 176, 0.1);
+      border: 1.5px solid var(--accent-teal);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-teal);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .header-desc {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+      font-weight: 400;
+    }
+
+    /* Highlight Banner */
+    .warning-banner {
+      background-color: rgba(234, 67, 53, 0.08);
+      border: 1px solid rgba(234, 67, 53, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 30px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: #ff8b80;
+      display: flex;
+      gap: 12px;
+    }
+
+    .warning-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      background-color: var(--accent-danger);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .field-label {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .country-code {
+      position: absolute;
+      left: 16px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .form-input {
+      width: 100%;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px 16px 16px 16px;
+      color: var(--text-primary);
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .form-input.phone-input {
+      padding-left: 54px;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 0 4px rgba(29, 211, 176, 0.15);
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 18px;
+      border-radius: 16px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-primary {
+      background-color: var(--accent-teal);
+      color: var(--bg-primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(29, 211, 176, 0.3);
+    }
+
+    .btn-danger {
+      background-color: var(--accent-danger);
+      color: #ffffff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(234, 67, 53, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Transition Containers */
+    .fade-section {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .fade-section.active {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Code Input Boxes (OTP) */
+    .otp-container {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .otp-input {
+      width: 50px;
+      height: 56px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 14px;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .otp-input:focus {
+      border-color: var(--accent-danger);
+      box-shadow: 0 0 0 4px rgba(234, 67, 53, 0.15);
+    }
+
+    /* Toast Message */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--accent-danger);
+      color: #ff8b80;
+      padding: 16px 24px;
+      border-radius: 16px;
+      font-size: 14.5px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1000;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Success Overlays */
+    .success-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-secondary);
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .success-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .success-ring {
+      width: 80px;
+      height: 80px;
+      background-color: rgba(52, 168, 83, 0.1);
+      border: 2px solid var(--accent-success);
+      color: var(--accent-success);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: 900;
+      margin-bottom: 24px;
+      animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .success-desc {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* Helper styles */
+    .timer-text {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .timer-text span {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--accent-teal);
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: underline;
+      outline: none;
+    }
+
+    .resend-btn:disabled {
+      color: var(--text-secondary);
+      cursor: not-allowed;
+      text-decoration: none;
+    }
+
+    /* Loader */
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s infinite linear;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="portal-card">
+    <!-- Success Screen Overlay -->
+    <div id="successOverlay" class="success-overlay">
+      <div class="success-ring">✓</div>
+      <h3 class="success-title">Account Deleted</h3>
+      <p class="success-desc">Your SecureFirst account and all associated insurance documents, policy history, and active records have been completely deleted from our database. Thank you for using SecureFirst.</p>
+    </div>
+
+    <!-- Main Header -->
+    <div class="brand-logo">
+      <div class="brand-icon">S</div>
+      <div class="brand-name">SecureFirst</div>
+    </div>
+
+    <!-- Section 1: Phone Entry -->
+    <div id="phoneSection" class="fade-section active">
+      <h1 class="header-title">Request Account Deletion</h1>
+      <p class="header-desc">To comply with security and Google Play Console guidelines, verify your registered phone number to safely delete your account and data.</p>
+      
+      <div class="warning-banner">
+        <div class="warning-icon">!</div>
+        <div>
+          <strong>Important Warning:</strong> Deleting your account is completely permanent. All your policy PDF documents, claim histories, and active leads will be immediately deleted and cannot be recovered.
+        </div>
+      </div>
+
+      <form id="phoneForm" onsubmit="handlePhoneSubmit(event)">
+        <div class="form-group">
+          <label class="field-label">Mobile Number</label>
+          <div class="input-wrapper">
+            <span class="country-code">+91</span>
+            <input 
+              id="phoneInput" 
+              type="tel" 
+              placeholder="Enter 10-digit mobile number" 
+              maxlength="10" 
+              pattern="[0-9]{10}"
+              required 
+              class="form-input phone-input"
+            />
+          </div>
+        </div>
+
+        <button id="sendBtn" type="submit" class="btn btn-primary">
+          <span>Send Verification OTP</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Section 2: OTP Verification -->
+    <div id="otpSection" class="fade-section">
+      <h1 class="header-title" style="color: var(--accent-danger)">Verify Identity</h1>
+      <p class="header-desc">We have sent a 6-digit verification code via SMS to your phone ending in <span id="phoneMask" style="font-weight: 700; color: var(--text-primary);"></span>.</p>
+
+      <form id="otpForm" onsubmit="handleOtpSubmit(event)">
+        <div class="form-group">
+          <label class="field-label" style="text-align: center; display: block;">6-Digit OTP</label>
+          <div class="otp-container">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 0)" onkeydown="moveBack(this, event, 0)">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 1)" onkeydown="moveBack(this, event, 1)">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 2)" onkeydown="moveBack(this, event, 2)">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 3)" onkeydown="moveBack(this, event, 3)">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 4)" onkeydown="moveBack(this, event, 4)">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required oninput="moveNext(this, 5)" onkeydown="moveBack(this, event, 5)">
+          </div>
+        </div>
+
+        <div class="timer-text">
+          Resend code in <span id="timerCountdown">60</span>s or 
+          <button id="resendBtn" type="button" class="resend-btn" disabled onclick="resendOtp()">Resend OTP</button>
+        </div>
+
+        <button id="deleteBtn" type="submit" class="btn btn-danger">
+          <span>Confirm Permanent Deletion</span>
+        </button>
+        
+        <button type="button" class="resend-btn" style="display: block; margin: 20px auto 0; text-align: center;" onclick="goBackToPhone()">← Change Phone Number</button>
+      </form>
+    </div>
+
+    <!-- Hidden reCAPTCHA for Firebase SDK -->
+    <div id="recaptcha-container"></div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="errorToast" class="toast">
+    <span>⚠️</span>
+    <span id="toastMsg">Something went wrong</span>
+  </div>
+
+  <!-- Firebase SDK Compatibility Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+  <script>
+    // 1. Firebase Configuration matching the project
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYLhQ8E8Ij1Hgz-KNkToYOwHooneM9rE0",
+      authDomain: "first-4b330.firebaseapp.com",
+      projectId: "first-4b330",
+      storageBucket: "first-4b330.firebasestorage.app",
+      messagingSenderId: "73782412414",
+      appId: "1:73782412414:android:8edd2195f308b50f02c42f"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Application Variables
+    let confirmationResult = null;
+    let timerInterval = null;
+    let secondsLeft = 60;
+
+    // Toast UI trigger
+    function showError(message) {
+      const toast = document.getElementById('errorToast');
+      document.getElementById('toastMsg').innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 5000);
+    }
+
+    // Initialize Invisible ReCAPTCHA Verifier
+    window.onload = function() {
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response) => {
+          // reCAPTCHA solved, allows phone submit
+        }
+      });
+    };
+
+    // Form input transitions (OTP focus fields navigation)
+    function moveNext(input, index) {
+      if (input.value && index < 5) {
+        document.querySelectorAll('.otp-input')[index + 1].focus();
+      }
+    }
+
+    function moveBack(input, event, index) {
+      if (event.key === 'Backspace' && !input.value && index > 0) {
+        document.querySelectorAll('.otp-input')[index - 1].focus();
+      }
+    }
+
+    // Countdown Timer logic
+    function startCountdown() {
+      secondsLeft = 60;
+      const display = document.getElementById('timerCountdown');
+      const resendBtn = document.getElementById('resendBtn');
+      resendBtn.disabled = true;
+      display.parentElement.style.opacity = "1";
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        secondsLeft--;
+        display.innerText = secondsLeft;
+        
+        if (secondsLeft <= 0) {
+          clearInterval(timerInterval);
+          resendBtn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    // Phone Submit (Send Verification OTP)
+    function handlePhoneSubmit(e) {
+      e.preventDefault();
+      
+      const phoneInput = document.getElementById('phoneInput').value.trim();
+      if (!/^[0-9]{10}$/.test(phoneInput)) {
+        showError('Please enter a valid 10-digit mobile number.');
+        return;
+      }
+
+      const sendBtn = document.getElementById('sendBtn');
+      const originalText = sendBtn.innerHTML;
+      sendBtn.innerHTML = '<div class="loader"></div> Sending OTP...';
+      sendBtn.disabled = true;
+
+      const fullPhoneNumber = '+91' + phoneInput;
+
+      auth.signInWithPhoneNumber(fullPhoneNumber, window.recaptchaVerifier)
+        .then((result) => {
+          confirmationResult = result;
+          
+          // Move UI to OTP state
+          document.getElementById('phoneMask').innerText = '+91 ******' + phoneInput.slice(-4);
+          document.getElementById('phoneSection').classList.remove('active');
+          setTimeout(() => {
+            document.getElementById('otpSection').classList.add('active');
+            document.querySelectorAll('.otp-input')[0].focus();
+            startCountdown();
+          }, 300);
+        })
+        .catch((error) => {
+          console.error('Firebase SMS trigger failed:', error);
+          showError(error.message || 'Failed to send OTP. Please check your connection and retry.');
+        })
+        .finally(() => {
+          sendBtn.innerHTML = originalText;
+          sendBtn.disabled = false;
+        });
+    }
+
+    // Resend OTP trigger
+    function resendOtp() {
+      const phoneInput = document.getElementById('phoneInput').value.trim();
+      const fullPhoneNumber = '+91' + phoneInput;
+
+      auth.signInWithPhoneNumber(fullPhoneNumber, window.recaptchaVerifier)
+        .then((result) => {
+          confirmationResult = result;
+          startCountdown();
+          showError('Verification code resent successfully.');
+        })
+        .catch((error) => {
+          console.error('Firebase SMS trigger failed:', error);
+          showError('Failed to resend OTP: ' + error.message);
+        });
+    }
+
+    // Navigate back to phone input
+    function goBackToPhone() {
+      document.getElementById('otpSection').classList.remove('active');
+      setTimeout(() => {
+        document.getElementById('phoneSection').classList.add('active');
+      }, 300);
+      clearInterval(timerInterval);
+    }
+
+    // OTP Submit (Verify & Soft Delete Account)
+    function handleOtpSubmit(e) {
+      e.preventDefault();
+
+      const otpInputs = document.querySelectorAll('.otp-input');
+      let otpCode = '';
+      otpInputs.forEach(input => {
+        otpCode += input.value.trim();
+      });
+
+      if (otpCode.length !== 6) {
+        showError('Please fill out all 6 digits of the OTP.');
+        return;
+      }
+
+      const deleteBtn = document.getElementById('deleteBtn');
+      const originalText = deleteBtn.innerHTML;
+      deleteBtn.innerHTML = '<div class="loader"></div> Verifying & Deleting...';
+      deleteBtn.disabled = true;
+
+      // 1. Confirm Firebase OTP
+      confirmationResult.confirm(otpCode)
+        .then(async (result) => {
+          // 2. Fetch User Firebase ID Token
+          const idToken = await result.user.getIdToken();
+          
+          // 3. Call backend endpoint to trigger soft delete
+          return fetch('/api/auth/delete-account-web', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ idToken })
+          });
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(errData => {
+              throw new Error(errData.error || 'Failed to soft delete account on database.');
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            // Trigger beautiful success overlay screen
+            clearInterval(timerInterval);
+            document.getElementById('successOverlay').classList.add('active');
+          } else {
+            showError(data.error || 'Failed to verify OTP or delete account.');
+          }
+        })
+        .catch(error => {
+          console.error('Deletion operation failed:', error);
+          showError(error.message || 'Incorrect verification code. Please enter the valid code sent to your phone.');
+        })
+        .finally(() => {
+          deleteBtn.innerHTML = originalText;
+          deleteBtn.disabled = false;
+        });
+    }
+  </script>
+</body>
+</html>

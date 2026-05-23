@@ -47,7 +47,15 @@ const leadSchema = new mongoose.Schema({
   },
   notes: {
     type: String,
-  }
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  deletedAt: {
+    type: Date,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Lead', leadSchema);

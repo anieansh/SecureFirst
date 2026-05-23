@@ -104,7 +104,7 @@ router.post('/policy', upload.single('document'), async (req, res) => {
 // GET /policies → get all policies (Admin)
 router.get('/policies', async (req, res) => {
   try {
-    const policies = await Policy.find().sort({ createdAt: -1 });
+    const policies = await Policy.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, data: policies });
   } catch (err) {
     console.error('[Policy] Error fetching policies:', err);
@@ -117,7 +117,7 @@ router.get('/policy/:mobile', async (req, res) => {
   const { mobile } = req.params;
   console.log(`[Backend] Fetching policies for mobile: ${mobile}`);
   try {
-    const filtered = await Policy.find({ mobileNumber: mobile }).sort({ createdAt: -1 });
+    const filtered = await Policy.find({ mobileNumber: mobile, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
     console.log(`[Backend] Found ${filtered.length} policies for ${mobile}`);
     res.status(200).json({ success: true, data: filtered });
   } catch (err) {
@@ -129,7 +129,7 @@ router.get('/policy/:mobile', async (req, res) => {
 // GET /clients → get unique clients based on policies (Admin)
 router.get('/clients', async (req, res) => {
   try {
-    const policies = await Policy.find();
+    const policies = await Policy.find({ isDeleted: { $ne: true } });
     const clientMap = {};
     
     policies.forEach(p => {
@@ -178,21 +178,70 @@ router.get('/clients', async (req, res) => {
   }
 });
 
-// DELETE /client/:mobile → delete a client and all their policies
+// DELETE /client/:mobile → soft delete a client and all their policies
 router.delete('/client/:mobile', async (req, res) => {
   const { mobile } = req.params;
   try {
-    // Delete all policies for this client
-    await Policy.deleteMany({ mobileNumber: mobile });
+    const timestamp = Date.now();
     
-    // Also delete user record if exists
+    // 1. Soft delete User record if exists
     const User = require('../models/User');
-    await User.deleteOne({ mobile: mobile });
+    const user = await User.findOne({ mobile: mobile, isDeleted: { $ne: true } });
+    if (user) {
+      const originalMobile = user.mobile;
+      const originalEmail = user.email;
+      const originalUid = user.firebaseUid;
 
-    console.log(`[Policy] Client deleted: ${mobile}`);
-    res.status(200).json({ success: true, message: 'Client and all associated data deleted successfully' });
+      user.isDeleted = true;
+      user.deletedAt = new Date();
+      user.mobile = `${originalMobile}_deleted_${timestamp}`;
+      user.email = `${originalEmail}_deleted_${timestamp}`;
+      if (originalUid) {
+        user.firebaseUid = `${originalUid}_deleted_${timestamp}`;
+      }
+      await user.save();
+
+      // Delete Firebase Auth User credential if exists
+      if (originalUid) {
+        try {
+          const admin = require('firebase-admin');
+          await admin.auth().deleteUser(originalUid);
+          console.log(`[Policy Admin] Deleted Firebase User Auth record for: ${originalUid}`);
+        } catch (fbErr) {
+          console.error(`[Policy Admin] Firebase User Auth deletion warning:`, fbErr.message);
+        }
+      }
+    }
+
+    // 2. Soft delete all policies for this client
+    await Policy.updateMany(
+      { mobileNumber: mobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${mobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    // 3. Soft delete all leads for this client
+    const Lead = require('../models/Lead');
+    await Lead.updateMany(
+      { mobileNumber: mobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${mobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    console.log(`[Policy] Client soft-deleted: ${mobile}`);
+    res.status(200).json({ success: true, message: 'Client and all associated data soft-deleted successfully' });
   } catch (err) {
-    console.error('[Policy] Error deleting client:', err);
+    console.error('[Policy] Error soft-deleting client:', err);
     res.status(500).json({ success: false, error: 'Failed to delete client' });
   }
 });

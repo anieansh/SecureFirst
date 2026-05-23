@@ -22,8 +22,8 @@ export default function NotificationsScreen() {
     setPrefs(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const PrefRow = ({ icon, label, subtitle, prefKey }: any) => (
-    <View style={styles.row}>
+  const PrefRow = ({ icon, label, subtitle, prefKey, isLast }: any) => (
+    <View style={[styles.row, isLast && { borderBottomWidth: 0 }]}>
       <View style={styles.rowLeft}>
         <View style={styles.iconWrap}>{icon}</View>
         <View style={{ flex: 1 }}>
@@ -54,13 +54,13 @@ export default function NotificationsScreen() {
         <View style={styles.card}>
           <PrefRow icon={<AlertTriangle size={20} color={colors.accentWarning} />} label="Renewal Reminders" subtitle="15 days before expiry" prefKey="renewalReminders" />
           <PrefRow icon={<Bell size={20} color={colors.accentDanger} />} label="Expiry Alerts" subtitle="On the day of expiry" prefKey="expiryAlerts" />
-          <PrefRow icon={<CheckCircle size={20} color={colors.accentSuccess} />} label="Policy Confirmation" subtitle="When a new policy is added" prefKey="newPolicyConfirmation" />
+          <PrefRow icon={<CheckCircle size={20} color={colors.accentSuccess} />} label="Policy Confirmation" subtitle="When a new policy is added" prefKey="newPolicyConfirmation" isLast />
         </View>
 
         <Text style={styles.sectionLabel}>Marketing</Text>
         <View style={styles.card}>
           <PrefRow icon={<TrendingUp size={20} color={colors.accentGold} />} label="Promotional Offers" subtitle="Deals and new products" prefKey="promotionalOffers" />
-          <PrefRow icon={<Mail size={20} color={colors.textSecondary} />} label="Email Notifications" subtitle="Receive updates by email" prefKey="emailNotifications" />
+          <PrefRow icon={<Mail size={20} color={colors.textSecondary} />} label="Email Notifications" subtitle="Receive updates by email" prefKey="emailNotifications" isLast />
         </View>
       </ScrollView>
     </View>

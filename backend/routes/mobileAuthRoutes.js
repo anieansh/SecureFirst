@@ -323,4 +323,81 @@ router.post('/firebase-login', async (req, res) => {
   }
 });
 
+// POST /delete-account (In-App Soft Delete)
+router.post('/delete-account', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'Authorization token is required' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const mobile = decoded.mobile;
+
+    const user = await User.findOne({ mobile, isDeleted: { $ne: true } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found' });
+    }
+
+    const timestamp = Date.now();
+    const originalMobile = user.mobile;
+    const originalEmail = user.email;
+    const originalUid = user.firebaseUid;
+
+    // 1. Soft delete the User by renaming unique fields & setting flags
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    user.mobile = `${originalMobile}_deleted_${timestamp}`;
+    user.email = `${originalEmail}_deleted_${timestamp}`;
+    if (originalUid) {
+      user.firebaseUid = `${originalUid}_deleted_${timestamp}`;
+    }
+    await user.save();
+
+    // 2. Soft delete Policy records
+    const Policy = require('../models/Policy');
+    await Policy.updateMany(
+      { mobileNumber: originalMobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${originalMobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    // 3. Soft delete Lead records
+    const Lead = require('../models/Lead');
+    await Lead.updateMany(
+      { mobileNumber: originalMobile, isDeleted: { $ne: true } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          deletedAt: new Date(),
+          mobileNumber: `${originalMobile}_deleted_${timestamp}`
+        } 
+      }
+    );
+
+    // 4. Delete Firebase Auth User credential if exists
+    if (originalUid) {
+      try {
+        await admin.auth().deleteUser(originalUid);
+        console.log(`[Mobile Auth] Deleted Firebase User Auth record for: ${originalUid}`);
+      } catch (fbErr) {
+        console.error(`[Mobile Auth] Firebase User Auth deletion warning:`, fbErr.message);
+      }
+    }
+
+    console.log(`[Mobile Auth] Account successfully soft-deleted for mobile: ${originalMobile}`);
+    return res.json({ success: true, message: 'Your account and associated data have been deleted successfully.' });
+
+  } catch (err) {
+    console.error('[Mobile Auth] Delete account error:', err);
+    return res.status(401).json({ success: false, error: 'Invalid or expired session token' });
+  }
+});
+
 module.exports = router;

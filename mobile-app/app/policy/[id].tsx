@@ -149,16 +149,23 @@ export default function PolicyDetailsScreen() {
           [
             { text: 'Cancel', style: 'cancel' },
             {
-              text: 'Open / Save',
+              text: 'Open',
               onPress: () => openFile(downloadRes.uri)
             }
           ]
         );
       }
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Download error:', err);
-      Alert.alert('Error', 'Failed to download policy. Please check your internet connection.');
+      if (err.message && err.message.includes('404')) {
+        Alert.alert(
+          'Document Not Found',
+          'The policy document is not available on the server. Please upload it via the Admin Panel or contact support.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to download policy. Please check your internet connection.');
+      }
     } finally {
       setLoading(false);
     }

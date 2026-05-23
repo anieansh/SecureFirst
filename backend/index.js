@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const policyRoutes = require('./routes/policyRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -23,7 +24,8 @@ mongoose.connect(MONGODB_URI)
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Main Routes
 app.use('/api/auth', authRoutes);
@@ -31,6 +33,10 @@ app.use('/api/mobile-auth', apiKeyAuth, mobileAuthRoutes);
 app.use('/api/config', apiKeyAuth, configRoutes);
 app.use('/api', requireMobileUser, policyRoutes);
 app.use('/api', requireMobileUser, leadRoutes);
+
+app.get('/delete-account', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/delete-account.html'));
+});
 
 app.get('/', (req, res) => {
   res.send('Secure First API is running with Persistent Storage.');

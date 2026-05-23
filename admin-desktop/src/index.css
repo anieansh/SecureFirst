@@ -104,6 +104,7 @@ input, select, textarea {
 /* Tables */
 .table-wrapper {
   overflow-x: auto;
+  min-height: 300px;
 }
 
 table {

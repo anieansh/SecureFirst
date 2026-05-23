@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Filter, Search, Trash2, Edit3, X, PlusCircle } from 'lucide-react';
+import { Filter, Search, Trash2, Edit3, X, PlusCircle, MoreVertical, Download } from 'lucide-react';
 
 const API_URL = 'https://api.securefirst.co/api/policies';
 const POLICY_API_BASE = 'https://api.securefirst.co/api/policy';
@@ -11,6 +11,17 @@ const Policies = () => {
   
   const [filter, setFilter] = useState('All'); // All, Active, Expiring, Expired
   const [search, setSearch] = useState('');
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.action-menu-container')) {
+        setOpenDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -67,6 +78,29 @@ const Policies = () => {
   const handleDeleteClick = (id: string) => {
     setPolicyToDelete(id);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleDownloadPolicy = async (policy: any) => {
+    if (!policy.attachedDocument) {
+      alert('No document attached to this policy');
+      return;
+    }
+    try {
+      const url = `https://api.securefirst.co/uploads/${policy.attachedDocument}`;
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = policy.attachedDocument;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed', error);
+      alert('Failed to download document');
+    }
   };
 
   const handleEditClick = (policy: any) => {
@@ -234,22 +268,48 @@ const Policies = () => {
                         {p.status}
                       </span>
                     </td>
-                    <td>
+                    <td style={{ position: 'relative', zIndex: openDropdownId === p._id ? 50 : 1 }} className="action-menu-container">
                       <div className="flex gap-3" style={{ justifyContent: 'center' }}>
                         <button 
-                          onClick={() => handleEditClick(p)}
-                          style={{ background: 'none', border: 'none', color: 'var(--accent-gold)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
-                          title="Edit Policy"
+                          onClick={() => setOpenDropdownId(openDropdownId === p._id ? null : p._id)}
+                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
                         >
-                          <Edit3 size={20} />
+                          <MoreVertical size={20} />
                         </button>
-                        <button 
-                          onClick={() => handleDeleteClick(p._id)}
-                          style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
-                          title="Delete Policy"
-                        >
-                          <Trash2 size={20} />
-                        </button>
+                        {openDropdownId === p._id && (
+                          <div style={{ 
+                            position: 'absolute', right: '50%', top: '70%', 
+                            backgroundColor: '#16191e', border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px', padding: '0.5rem', zIndex: 10,
+                            display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                            minWidth: '160px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                          }}>
+                            <button 
+                              onClick={() => { handleDownloadPolicy(p); setOpenDropdownId(null); }}
+                              style={{ background: 'none', border: 'none', color: '#1DD3B0', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Download size={16} /> Download Policy
+                            </button>
+                            <button 
+                              onClick={() => { handleEditClick(p); setOpenDropdownId(null); }}
+                              style={{ background: 'none', border: 'none', color: 'var(--accent-gold)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Edit3 size={16} /> Edit
+                            </button>
+                            <button 
+                              onClick={() => { handleDeleteClick(p._id); setOpenDropdownId(null); }}
+                              style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <Trash2 size={16} /> Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
