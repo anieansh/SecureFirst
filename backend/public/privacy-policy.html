@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - SecureFirst Insurance Services</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0F172A;
+      --bg-secondary: #1E293B;
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --accent-gold: #F59E0B;
+      --accent-blue: #38BDF8;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 48px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .last-updated {
+      font-size: 14px;
+      color: var(--accent-gold);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    h2 {
+      font-size: 20px;
+      color: var(--accent-blue);
+      margin-top: 32px;
+      margin-bottom: 16px;
+      font-weight: 700;
+      border-left: 4px solid var(--accent-gold);
+      padding-left: 12px;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 400;
+    }
+
+    ul {
+      list-style-type: none;
+      margin-bottom: 24px;
+      padding-left: 12px;
+    }
+
+    li {
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      font-size: 15px;
+      position: relative;
+      padding-left: 20px;
+    }
+
+    li::before {
+      content: "•";
+      color: var(--accent-gold);
+      font-size: 20px;
+      position: absolute;
+      left: 0;
+      top: -2px;
+    }
+
+    .highlight {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+      margin-top: 48px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--accent-gold);
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 20px 10px;
+      }
+      .container {
+        padding: 24px 16px;
+        border-radius: 16px;
+      }
+      h1 {
+        font-size: 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Privacy Policy</h1>
+      <div class="last-updated">Last Updated: May 24, 2026</div>
+    </header>
+
+    <section>
+      <p>Welcome to <span class="highlight">SecureFirst Insurance Services</span> ("we," "our," or "us"). We are dedicated to protecting your personal information and your right to privacy. This Privacy Policy governs your use of the SecureFirst mobile application and our associated digital services.</p>
+      
+      <p>By using our services, you consent to the collection, usage, and storage of your information as outlined below. If you do not agree with this policy, please do not access or use our application.</p>
+    </section>
+
+    <section>
+      <h2>1. Information We Collect</h2>
+      <p>To provide accurate insurance policy coordination, claim filings, and account management, we collect specific details including:</p>
+      <ul>
+        <li><span class="highlight">Personal Identifiers:</span> Mobile number, full name, and email address.</li>
+        <li><span class="highlight">Authentication Credentials:</span> One-Time Password (OTP) verification records supplied by Firebase Auth.</li>
+        <li><span class="highlight">Insurance Details:</span> Motor vehicle registration plate numbers, active policies, coverage milestones, and application leads.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. Device Permissions We Request</h2>
+      <p>To allow seamless document uploads and claim submissions, the app requests the following specific permissions on your device:</p>
+      <ul>
+        <li><span class="highlight">READ_MEDIA_IMAGES (Images Permission):</span> Required to select and upload physical registration cards, driving licenses, and photographs of vehicle or property damage for claim verification directly from your device's photo gallery.</li>
+        <li><span class="highlight">READ_MEDIA_VIDEO (Videos Permission):</span> Required to select and upload pre-recorded visual video walkarounds of incident/accident scenes as supplementary proof to insurance adjusters for processing.</li>
+      </ul>
+      <p>We do <span class="highlight">NOT</span> sell, trade, or share your private image or video media with third-party advertisers or external marketing networks.</p>
+    </section>
+
+    <section>
+      <h2>3. How We Use Your Data</h2>
+      <p>Your collected information is used solely to:</p>
+      <ul>
+        <li>Maintain, authenticate, and secure your SecureFirst profile.</li>
+        <li>Facilitate lead requests and issue new insurance policies.</li>
+        <li>Send critical time-sensitive expiry alerts and renewal reminders.</li>
+        <li>Coordinate direct service support through Phone, WhatsApp, and Email channels.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. Data Retention & Privacy Controls (GDPR Compliance)</h2>
+      <p>We respect your right to control your personal information. We store your data securely inside protected cloud environments:</p>
+      <ul>
+        <li><span class="highlight">Self-Service Account Deletion:</span> You have the right to request full account deletion at any time. This can be performed directly inside the mobile app's security settings or via our self-service deletion web portal.</li>
+        <li><span class="highlight">Soft-Deletion Protocol:</span> When you delete your account, your unique identifiers (phone, email, Firebase UID) are immediately released and retired so you can register fresh. All associated policy details are marked inactive, and your user credentials are permanently deleted from Firebase Auth.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Contact Us</h2>
+      <p>If you have any questions or feedback regarding this Privacy Policy, or if you wish to exercise your rights, please reach out to us:</p>
+      <ul>
+        <li><span class="highlight">Email:</span> <a href="mailto:Support@securefirst.co">Support@securefirst.co</a></li>
+        <li><span class="highlight">Location:</span> Shahabad, Haryana, India</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>&copy; 2026 SecureFirst Insurance Services. All rights reserved.</p>
+    </footer>
+  </div>
+
+</body>
+</html>
