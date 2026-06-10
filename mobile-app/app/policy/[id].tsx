@@ -235,7 +235,9 @@ export default function PolicyDetailsScreen() {
       formData.append('name', policy.clientName);
       formData.append('mobileNumber', userMobile || '');
       formData.append('policyType', policy.policyType);
-      formData.append('carCondition', policy.policyType === 'Motor' ? 'Old' : undefined);
+      if (policy.policyType === 'Motor') {
+        formData.append('carCondition', 'Old');
+      }
       formData.append('vehicleNumber', policy.vehicleNumber || '');
       formData.append('notes', `Renewal request for Policy #${policy.policyNumber}`);
 

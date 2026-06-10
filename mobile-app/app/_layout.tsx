@@ -1,5 +1,4 @@
-// import '@react-native-firebase/app';
-import '../utils/firebase';
+// import '../utils/firebase';
 import { Stack, router } from 'expo-router';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { View, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, Linking, Platform, StyleSheet } from 'react-native';
@@ -8,7 +7,7 @@ import { clearBiometricCredentials } from '../utils/biometrics';
 import Constants from 'expo-constants';
 import { ShieldAlert } from 'lucide-react-native';
 import { storage } from '../utils/storage';
-import apiClient from '../utils/apiClient';
+import apiClient, { setLogoutCallback } from '../utils/apiClient';
 
 import { API_ENDPOINTS } from '../constants/api';
 
@@ -63,6 +62,7 @@ function RootApp() {
   const colors = useTheme();
 
   useEffect(() => {
+    setLogoutCallback(logout);
     initAuthAndCheckVersion();
   }, []);
 

@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     const allowed = ['.pdf', '.png', '.jpg', '.jpeg'];
@@ -38,7 +38,7 @@ const upload = multer({
 // POST /policy → add policy
 router.post('/policy', upload.single('document'), async (req, res) => {
   let { clientName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber } = req.body;
-  
+
   const attachedDocument = req.file ? req.file.filename : req.body.attachedDocument;
 
   if (policyType === 'Motor') {
@@ -66,11 +66,11 @@ router.post('/policy', upload.single('document'), async (req, res) => {
 
   try {
     const newPolicy = new Policy({
-      clientName, 
-      mobileNumber, 
-      clientEmail, 
-      policyType, 
-      policyNumber, 
+      clientName,
+      mobileNumber,
+      clientEmail,
+      policyType,
+      policyNumber,
       insurer,
       issueDate: new Date(issueDate),
       expiryDate: new Date(expiryDate),
@@ -79,14 +79,62 @@ router.post('/policy', upload.single('document'), async (req, res) => {
       attachedDocument,
       vehicleNumber: policyType === 'Motor' ? vehicleNumber : undefined
     });
-    
+
     await newPolicy.save();
     console.log(`[Policy] New policy added: ${policyNumber} for ${mobileNumber}`);
-    res.status(201).json({ 
-      success: true, 
-      data: { 
-        policy: newPolicy 
-      } 
+
+    // Send welcome message via Aisensy
+    try {
+      let cleanMobile = mobileNumber.replace(/\D/g, '');
+      if (cleanMobile.startsWith('91') && cleanMobile.length > 10) {
+        // already has country code
+      } else {
+        cleanMobile = '91' + cleanMobile;
+      }
+
+      const vehicleVal = vehicleNumber || 'N/A';
+
+      const aisensyPayload = {
+        apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZmY1OGVkYWIwYjRhNTMyOTE5MGMxMCIsIm5hbWUiOiJTRUNVUkUgRklSU1QiLCJhcHBOYW1lIjoiQWlTZW5zeSIsImNsaWVudElkIjoiNjlmZjU4ZWRhYjBiNGE1MzI5MTkwYzBiIiwiYWN0aXZlUGxhbiI6IkZSRUVfRk9SRVZFUiIsImlhdCI6MTc3ODM0MjEyNX0.rIewZkqrioMIeasLLk_KVmFZCvqC7gxOd0wZMbIxkEY",
+        campaignName: "welcome msg",
+        destination: cleanMobile,
+        userName: "SECURE FIRST",
+        templateParams: [
+          clientName,
+          vehicleVal
+        ],
+        source: "new-landing-page form",
+        media: {},
+        buttons: [],
+        carouselCards: [],
+        location: {},
+        attributes: {},
+        paramsFallbackValue: {
+          "FirstName": "user"
+        }
+      };
+
+      console.log(`[Aisensy Policy Welcome] Triggering campaign "welcome msg" for ${cleanMobile} (${clientName})`);
+
+      const aisensyRes = await fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(aisensyPayload)
+      });
+
+      const aisensyData = await aisensyRes.json();
+      console.log(`[Aisensy Policy Welcome] Aisensy response:`, aisensyData);
+    } catch (aisensyErr) {
+      console.error('[Aisensy Policy Welcome] Failed to send Welcome notification:', aisensyErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        policy: newPolicy
+      }
     });
   } catch (err) {
     console.error('[Policy] Error adding policy:', err);
@@ -131,7 +179,7 @@ router.get('/clients', async (req, res) => {
   try {
     const policies = await Policy.find({ isDeleted: { $ne: true } });
     const clientMap = {};
-    
+
     policies.forEach(p => {
       if (!clientMap[p.mobileNumber]) {
         clientMap[p.mobileNumber] = {
@@ -162,12 +210,12 @@ router.get('/clients', async (req, res) => {
       if (hasExpiring) status = 'Expiring';
       else if (hasActive) status = 'Active';
 
-      return { 
-        name: c.name, 
-        mobileNumber: c.mobileNumber, 
-        email: c.email || 'N/A', 
-        numberOfPolicies: c.numberOfPolicies, 
-        status 
+      return {
+        name: c.name,
+        mobileNumber: c.mobileNumber,
+        email: c.email || 'N/A',
+        numberOfPolicies: c.numberOfPolicies,
+        status
       };
     });
 
@@ -183,7 +231,7 @@ router.delete('/client/:mobile', async (req, res) => {
   const { mobile } = req.params;
   try {
     const timestamp = Date.now();
-    
+
     // 1. Soft delete User record if exists
     const User = require('../models/User');
     const user = await User.findOne({ mobile: mobile, isDeleted: { $ne: true } });
@@ -216,12 +264,12 @@ router.delete('/client/:mobile', async (req, res) => {
     // 2. Soft delete all policies for this client
     await Policy.updateMany(
       { mobileNumber: mobile, isDeleted: { $ne: true } },
-      { 
-        $set: { 
-          isDeleted: true, 
+      {
+        $set: {
+          isDeleted: true,
           deletedAt: new Date(),
           mobileNumber: `${mobile}_deleted_${timestamp}`
-        } 
+        }
       }
     );
 
@@ -229,12 +277,12 @@ router.delete('/client/:mobile', async (req, res) => {
     const Lead = require('../models/Lead');
     await Lead.updateMany(
       { mobileNumber: mobile, isDeleted: { $ne: true } },
-      { 
-        $set: { 
-          isDeleted: true, 
+      {
+        $set: {
+          isDeleted: true,
           deletedAt: new Date(),
           mobileNumber: `${mobile}_deleted_${timestamp}`
-        } 
+        }
       }
     );
 
@@ -282,7 +330,7 @@ router.put('/client/:mobile', async (req, res) => {
 router.put('/policy/:id', upload.single('document'), async (req, res) => {
   const { id } = req.params;
   const updateData = { ...req.body };
-  
+
   if (req.file) {
     updateData.attachedDocument = req.file.filename;
   }

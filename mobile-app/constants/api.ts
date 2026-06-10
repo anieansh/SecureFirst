@@ -1,6 +1,11 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
-export const API_BASE = 'https://api.securefirst.co/api';
+export const API_BASE = Platform.select({
+  android: 'http://10.0.2.2:5001/api',
+  ios: 'http://localhost:5001/api',
+  default: 'https://api.securefirst.co/api'
+}) as string;
 export const API_BASE_URL = API_BASE;
 export const API_KEY = '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a92';
 

@@ -15,7 +15,7 @@ const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function SignupScreen() {
   const { login } = useAuth();
-  const { mobile, idToken } = useLocalSearchParams();
+  const { mobile, otp } = useLocalSearchParams();
   const scheme = useColorScheme();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -34,16 +34,17 @@ export default function SignupScreen() {
     setError('');
 
     try {
-      // Send ID Token to our backend to create user
-      const res = await apiClient.post(`${AUTH_URL}/register-firebase`, {
-        idToken,
+      // Send OTP to backend to register user
+      const res = await apiClient.post(`${AUTH_URL}/register-otp`, {
+        mobile,
+        otp,
         email: email.trim(), 
         name: name.trim() 
       });
 
       if (res.data.success) {
         const { user, token: userToken } = res.data.data;
-        login(user.mobile, user.email, user.name, userToken);
+        await login(user.mobile, user.email, user.name, userToken);
         router.replace('/(tabs)/home');
       }
     } catch (err: any) {

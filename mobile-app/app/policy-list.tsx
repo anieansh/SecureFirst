@@ -81,7 +81,7 @@ export default function PolicyListScreen() {
           <View style={styles.typeTag}>
             <Text style={styles.typeTagText}>{item.policyType}</Text>
           </View>
-          <View style={[styles.statusBadge, styles[`badge${item.status}`]]}>
+          <View style={[styles.statusBadge, (styles as any)[`badge${item.status}`]]}>
             <Text style={styles.statusText}>{item.status}</Text>
           </View>
         </View>

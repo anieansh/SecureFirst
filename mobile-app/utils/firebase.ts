@@ -1,3 +1,5 @@
+// Firebase authentication configuration commented out as Firebase is no longer used for OTP.
+/*
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence, Auth } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,3 +35,4 @@ if (!firebase.apps.length) {
 console.log("Firebase App initialized with API Key:", app.options.apiKey ? "PRESENT" : "MISSING");
 
 export { app, auth, firebase, firebaseConfig };
+*/

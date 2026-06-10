@@ -4,6 +4,13 @@ import { router } from 'expo-router';
 import { storage } from './storage';
 import { API_BASE_URL, API_KEY } from '../constants/api';
 
+let logoutCallback: (() => Promise<void> | void) | null = null;
+let isAlertShowing = false;
+
+export const setLogoutCallback = (callback: () => Promise<void> | void) => {
+  logoutCallback = callback;
+};
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -33,25 +40,36 @@ apiClient.interceptors.response.use(
       // Session Expired
       console.log('[API] 401 Unauthorized - Session Expired');
       
-      // Clear storage
-      await storage.clearAll();
+      if (!isAlertShowing) {
+        isAlertShowing = true;
 
-      // Show popup
-      Alert.alert(
-        'Session Expired',
-        'Your session has expired. Please login again.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Redirect to login page
-              // Assuming 'index' is the login page as per project structure
-              router.replace('/');
+        // Perform logout and session cleanup
+        if (logoutCallback) {
+          try {
+            await logoutCallback();
+          } catch (logoutErr) {
+            console.error('Error during logout callback:', logoutErr);
+          }
+        } else {
+          await storage.clearAll();
+          router.replace('/');
+        }
+
+        // Show popup
+        Alert.alert(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                isAlertShowing = false;
+              },
             },
-          },
-        ],
-        { cancelable: false }
-      );
+          ],
+          { cancelable: false }
+        );
+      }
     }
     return Promise.reject(error);
   }

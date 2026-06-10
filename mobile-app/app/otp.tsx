@@ -8,7 +8,6 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import { auth } from '../utils/firebase';
 import apiClient from '../utils/apiClient';
 
 import { API_ENDPOINTS } from '../constants/api';
@@ -16,7 +15,7 @@ import { API_ENDPOINTS } from '../constants/api';
 const AUTH_URL = API_ENDPOINTS.AUTH;
 
 export default function OTPScreen() {
-  const { confirmationObj, login } = useAuth();
+  const { login } = useAuth();
   const { mobile, isNewUser } = useLocalSearchParams();
   const scheme = useColorScheme();
   const colors = useTheme();
@@ -28,14 +27,6 @@ export default function OTPScreen() {
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    if (!confirmationObj) {
-      Alert.alert('Error', 'OTP session expired or invalid. Please try again.', [
-        { text: 'OK', onPress: () => router.replace('/') }
-      ]);
-    }
-  }, [confirmationObj]);
-
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       setError('Please enter the 6-digit OTP');
@@ -45,40 +36,37 @@ export default function OTPScreen() {
     setError('');
 
     try {
-      // 1. Confirm OTP with Firebase
-      await confirmationObj.confirm(otp);
-
-      // 2. Get the Firebase ID Token
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('User not found after verification');
-      }
-      const idToken = await currentUser.getIdToken();
-
-      // 3. Check if new user
       if (isNewUser === 'true') {
-        // Go to signup screen to collect name/email
-        router.replace({ pathname: '/signup', params: { mobile, idToken } });
+        // First verify OTP with backend
+        const res = await apiClient.post(`${AUTH_URL}/verify-otp`, {
+          mobile,
+          otp
+        });
+        
+        if (res.data.success) {
+          // Go to signup screen to collect name/email and pass mobile & verified otp
+          router.replace({ pathname: '/signup', params: { mobile, otp } });
+        } else {
+          setError(res.data.error || 'Verification failed. Please try again.');
+        }
       } else {
-        // Existing user, verify with backend
-        const res = await apiClient.post(`${AUTH_URL}/verify-otp-firebase`, {
-          idToken
+        // Existing user, verify and login in one go
+        const res = await apiClient.post(`${AUTH_URL}/verify-otp`, {
+          mobile,
+          otp
         });
 
         if (res.data.success) {
           const { user, token: userToken } = res.data.data;
-          login(user.mobile, user.email, user.name, userToken);
+          await login(user.mobile, user.email, user.name, userToken);
           router.replace('/(tabs)/home');
+        } else {
+          setError(res.data.error || 'Verification failed. Please try again.');
         }
       }
     } catch (err: any) {
       console.error('[Verify OTP Error]:', err);
-      // Firebase throws specific errors like auth/invalid-verification-code
-      if (err.code === 'auth/invalid-verification-code') {
-        setError('Invalid OTP code. Please try again.');
-      } else {
-        setError(err.response?.data?.error || err.message || 'Verification failed. Please try again.');
-      }
+      setError(err.response?.data?.error || err.message || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }

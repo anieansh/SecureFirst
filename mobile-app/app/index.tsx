@@ -8,9 +8,6 @@ import { ShieldCheck, ChevronRight } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from './_layout';
 import { useTheme } from './theme';
-import { auth, app, firebase } from '../utils/firebase';
-import { signInWithPhoneNumber } from 'firebase/auth';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import apiClient from '../utils/apiClient';
 
 import { API_ENDPOINTS } from '../constants/api';
@@ -18,17 +15,8 @@ import { API_ENDPOINTS } from '../constants/api';
 const AUTH_URL = API_ENDPOINTS.AUTH;
 
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCYLhQ8E8Ij1Hgz-KNkToYOwHooneM9rE0",
-  authDomain: "first-4b330.firebaseapp.com",
-  projectId: "first-4b330",
-  storageBucket: "first-4b330.firebasestorage.app",
-  messagingSenderId: "73782412414",
-  appId: "1:73782412414:android:8edd2195f308b50f02c42f"
-};
-
 export default function LoginScreen() {
-  const { setConfirmationObj, token } = useAuth();
+  const { token } = useAuth();
   const scheme = useColorScheme();
   const colors = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -37,7 +25,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Auto-redirect if already logged in
@@ -52,39 +39,21 @@ export default function LoginScreen() {
       setError('Please enter a valid 10-digit mobile number');
       return;
     }
-    if (!recaptchaVerifier.current) {
-      setError('Recaptcha verifier not initialized');
-      return;
-    }
     setLoading(true);
     setError('');
     try {
-      // Check if user is new
-      const res = await apiClient.post(`${AUTH_URL}/check-user`, { mobile });
-      const isNewUser = !res.data.data.exists;
-
-      const phoneNumber = `+91${mobile}`; // Defaulting to India code
+      // Send OTP via backend endpoint
+      const res = await apiClient.post(`${AUTH_URL}/send-otp`, { mobile });
       
-      // DEEP DEBUG: Check exact state of Firebase before call
-      const modularKey = app.options.apiKey;
-      const compatKey = firebase.app().options.apiKey;
-      
-      console.log("[Auth Debug] Modular API Key:", modularKey ? "FOUND" : "MISSING");
-      console.log("[Auth Debug] Compat API Key:", compatKey ? "FOUND" : "MISSING");
-      console.log("[Auth Debug] Using Phone Number:", phoneNumber);
-
-      if (!modularKey && !compatKey) {
-        throw new Error("Critical: API Key not found in any Firebase instance.");
+      if (res.data.success) {
+        const { isNewUser } = res.data.data;
+        // Navigate to OTP screen and pass the mobile number + new user status
+        router.push({ pathname: '/otp', params: { mobile, isNewUser: isNewUser.toString() } });
+      } else {
+        setError(res.data.error || 'Failed to send OTP. Please try again.');
       }
-
-      // Using the modular SDK as it's more direct with the 'auth' instance
-      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier.current!);
-      setConfirmationObj(confirmation);
-      
-      // Navigate to OTP screen and pass the mobile number + new user status
-      router.push({ pathname: '/otp', params: { mobile, isNewUser: isNewUser.toString() } });
     } catch (err: any) {
-      console.error('[Firebase OTP Error]:', err);
+      console.error('[Send OTP Error]:', err);
       setError(err.response?.data?.error || err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
@@ -93,11 +62,6 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={app.options}
-        attemptInvisibleVerification={true}
-      />
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}

@@ -8,6 +8,10 @@ import App from './App.tsx'
 const API_KEY = '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a92';
 axios.interceptors.request.use((config) => {
   config.headers['X-API-Key'] = API_KEY;
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 

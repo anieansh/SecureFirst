@@ -34,6 +34,173 @@ const generateToken = (user) => {
 
 let otpStore = {};
 
+// POST /send-otp
+router.post('/send-otp', async (req, res) => {
+  const { mobile } = req.body;
+  if (!mobile) {
+    return res.status(400).json({ success: false, error: 'Mobile number is required' });
+  }
+
+  try {
+    const user = await User.findOne({ mobile, isDeleted: { $ne: true } });
+    const isNewUser = !user;
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore[mobile] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+
+    let cleanMobile = mobile.replace(/\D/g, '');
+    if (cleanMobile.startsWith('91') && cleanMobile.length > 10) {
+      // already has country code
+    } else {
+      cleanMobile = '91' + cleanMobile;
+    }
+
+    const payload = {
+      apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZmY1OGVkYWIwYjRhNTMyOTE5MGMxMCIsIm5hbWUiOiJTRUNVUkUgRklSU1QiLCJhcHBOYW1lIjoiQWlTZW5zeSIsImNsaWVudElkIjoiNjlmZjU4ZWRhYjBiNGE1MzI5MTkwYzBiIiwiYWN0aXZlUGxhbiI6IkZSRUVfRk9SRVZFUiIsImlhdCI6MTc3ODM0MjEyNX0.rIewZkqrioMIeasLLk_KVmFZCvqC7gxOd0wZMbIxkEY",
+      campaignName: "OTP AUTNETICATION",
+      destination: cleanMobile,
+      userName: "SECURE FIRST",
+      templateParams: [
+        otp
+      ],
+      source: "new-landing-page form",
+      media: {},
+      buttons: [
+        {
+          "type": "button",
+          "sub_type": "url",
+          "index": 0,
+          "parameters": [
+            {
+              "type": "text",
+              "text": otp
+            }
+          ]
+        }
+      ],
+      carouselCards: [],
+      location: {},
+      attributes: {},
+      paramsFallbackValue: {
+        "FirstName": user ? user.name : "user"
+      }
+    };
+
+    console.log(`[Aisensy OTP] Sending OTP ${otp} to destination ${cleanMobile} for ${user ? 'existing' : 'new'} user`);
+
+    const response = await fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseData = await response.json();
+    console.log(`[Aisensy OTP] Aisensy API response:`, responseData);
+
+    return res.json({
+      success: true,
+      data: {
+        isNewUser
+      }
+    });
+
+  } catch (err) {
+    console.error('[Aisensy OTP] Send OTP error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to send OTP' });
+  }
+});
+
+// POST /verify-otp
+router.post('/verify-otp', async (req, res) => {
+  const { mobile, otp } = req.body;
+  if (!mobile || !otp) {
+    return res.status(400).json({ success: false, error: 'Mobile and OTP are required' });
+  }
+
+  const stored = otpStore[mobile];
+  if (!stored || Date.now() > stored.expiresAt || stored.otp !== otp) {
+    return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
+  }
+
+  try {
+    const user = await User.findOne({ mobile, isDeleted: { $ne: true } });
+    if (!user) {
+      return res.json({
+        success: true,
+        data: {
+          message: 'OTP verified. Please proceed to registration.',
+          isNewUser: true
+        }
+      });
+    }
+
+    const token = generateToken(user);
+    console.log(`[Aisensy OTP] User logged in: ${mobile}`);
+    
+    // Clear OTP after successful verify
+    delete otpStore[mobile];
+
+    return res.json({
+      success: true,
+      data: {
+        userId: user._id,
+        token,
+        user: { mobile: user.mobile, email: user.email, name: user.name }
+      }
+    });
+
+  } catch (err) {
+    console.error('[Aisensy OTP] Verification error:', err);
+    return res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
+// POST /register-otp
+router.post('/register-otp', async (req, res) => {
+  const { mobile, otp, name, email } = req.body;
+  if (!mobile || !otp || !name) {
+    return res.status(400).json({ success: false, error: 'Mobile, OTP and name are required' });
+  }
+
+  const stored = otpStore[mobile];
+  if (!stored || Date.now() > stored.expiresAt || stored.otp !== otp) {
+    return res.status(400).json({ success: false, error: 'Invalid or expired OTP' });
+  }
+
+  try {
+    const existingUser = await User.findOne({ mobile, isDeleted: { $ne: true } });
+    if (existingUser) {
+      return res.status(409).json({ success: false, error: 'User already exists' });
+    }
+
+    const newUser = new User({
+      mobile,
+      email: email ? email.toLowerCase().trim() : '',
+      name: name.trim()
+    });
+
+    await newUser.save();
+    const token = generateToken(newUser);
+
+    delete otpStore[mobile];
+
+    console.log(`[Aisensy OTP] New user registered via OTP: ${mobile}`);
+    return res.status(201).json({
+      success: true,
+      data: {
+        userId: newUser._id,
+        token,
+        user: { mobile: newUser.mobile, email: newUser.email, name: newUser.name }
+      }
+    });
+  } catch (err) {
+    console.error('[Aisensy OTP] Registration error:', err);
+    return res.status(500).json({ success: false, error: 'Registration failed' });
+  }
+});
+
 // POST /check-user
 router.post('/check-user', async (req, res) => {
   const { mobile } = req.body;
@@ -205,123 +372,7 @@ router.post('/change-password', async (req, res) => {
   }
 });
 
-// POST /verify-otp-firebase (Existing User Login)
-router.post('/verify-otp-firebase', async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) return res.status(400).json({ success: false, error: 'ID Token is required' });
-  
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    let mobile = decodedToken.phone_number; 
-    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
-    
-    let user = await User.findOne({ mobile });
-    if (!user) {
-      // If user not found in DB but OTP verified, we need them to go to signup
-      // But this endpoint is specifically for existing users.
-      return res.status(404).json({ success: false, error: 'User record not found in database. Please signup.' });
-    }
-
-    if (!user.firebaseUid) {
-      user.firebaseUid = decodedToken.uid;
-      await user.save();
-    }
-
-    const token = generateToken(user);
-    console.log(`[Mobile Auth] Existing user verified OTP: ${mobile}`);
-    return res.json({
-      success: true,
-      data: {
-        userId: user._id,
-        token,
-        user: { mobile: user.mobile, email: user.email, name: user.name }
-      }
-    });
-  } catch (error) {
-    console.error('[Mobile Auth] OTP Verification error:', error);
-    return res.status(401).json({ success: false, error: 'Invalid token' });
-  }
-});
-
-// POST /register-firebase (New User Signup)
-router.post('/register-firebase', async (req, res) => {
-  const { idToken, name, email } = req.body;
-  if (!idToken || !name || !email) {
-    return res.status(400).json({ success: false, error: 'Token, name and email are required' });
-  }
-
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    let mobile = decodedToken.phone_number; 
-    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
-
-    let user = await User.findOne({ mobile });
-    if (user) {
-      // Update existing user if they somehow hit register
-      user.name = name.trim();
-      user.email = email.toLowerCase().trim();
-      user.firebaseUid = decodedToken.uid;
-    } else {
-      user = new User({
-        mobile,
-        email: email.toLowerCase().trim(),
-        name: name.trim(),
-        firebaseUid: decodedToken.uid
-      });
-    }
-    
-    await user.save();
-    const token = generateToken(user);
-
-    console.log(`[Mobile Auth] New user registered via OTP: ${mobile}`);
-    return res.status(201).json({
-      success: true,
-      data: {
-        userId: user._id,
-        token,
-        user: { mobile: user.mobile, email: user.email, name: user.name }
-      }
-    });
-  } catch (error) {
-    console.error('[Mobile Auth] Registration error:', error);
-    return res.status(401).json({ success: false, error: 'Invalid token' });
-  }
-});
-
-// POST /firebase-login (Legacy/Combined)
-router.post('/firebase-login', async (req, res) => {
-  const { idToken, name, email } = req.body;
-  if (!idToken) return res.status(400).json({ success: false, error: 'ID Token is required' });
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    let mobile = decodedToken.phone_number; 
-    if (mobile.startsWith('+91')) mobile = mobile.replace('+91', '');
-    if (!mobile) return res.status(400).json({ success: false, error: 'Token missing phone number' });
-
-    let user = await User.findOne({ mobile });
-    if (!user) {
-      user = new User({ mobile, email: email || '', name: name || 'SecureFirst User', firebaseUid: decodedToken.uid });
-      await user.save();
-    } else if (!user.firebaseUid) {
-      user.firebaseUid = decodedToken.uid;
-      await user.save();
-    }
-
-    const token = generateToken(user);
-    console.log(`[Mobile Auth] User logged in via Firebase: ${mobile}`);
-    return res.json({
-      success: true,
-      data: {
-        userId: user._id,
-        token,
-        user: { mobile: user.mobile, email: user.email, name: user.name }
-      }
-    });
-  } catch (error) {
-    console.error('[Mobile Auth] Firebase error:', error);
-    return res.status(401).json({ success: false, error: 'Invalid token' });
-  }
-});
+// Firebase OTP endpoints removed in favor of Aisensy OTP
 
 // POST /delete-account (In-App Soft Delete)
 router.post('/delete-account', async (req, res) => {
