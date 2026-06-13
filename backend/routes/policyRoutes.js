@@ -94,14 +94,27 @@ router.post('/policy', upload.single('document'), async (req, res) => {
 
       const vehicleVal = vehicleNumber || 'N/A';
 
+      const formatDateStr = (dateVal) => {
+        if (!dateVal) return 'N/A';
+        const d = new Date(dateVal);
+        if (isNaN(d.getTime())) return 'N/A';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+      };
+
       const aisensyPayload = {
         apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZmY1OGVkYWIwYjRhNTMyOTE5MGMxMCIsIm5hbWUiOiJTRUNVUkUgRklSU1QiLCJhcHBOYW1lIjoiQWlTZW5zeSIsImNsaWVudElkIjoiNjlmZjU4ZWRhYjBiNGE1MzI5MTkwYzBiIiwiYWN0aXZlUGxhbiI6IkZSRUVfRk9SRVZFUiIsImlhdCI6MTc3ODM0MjEyNX0.rIewZkqrioMIeasLLk_KVmFZCvqC7gxOd0wZMbIxkEY",
-        campaignName: "welcome msg",
+        campaignName: "welcome to secure first",
         destination: cleanMobile,
         userName: clientName,
         templateParams: [
           clientName,
-          vehicleVal
+          vehicleVal,
+          insurer,
+          formatDateStr(issueDate),
+          formatDateStr(expiryDate)
         ],
         source: "new-landing-page form",
         media: {},
@@ -114,7 +127,7 @@ router.post('/policy', upload.single('document'), async (req, res) => {
         }
       };
 
-      console.log(`[Aisensy Policy Welcome] Triggering campaign "welcome msg" for ${cleanMobile} (${clientName})`);
+      console.log(`[Aisensy Policy Welcome] Triggering campaign "welcome to secure first" for ${cleanMobile} (${clientName})`);
 
       const aisensyRes = await fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
         method: 'POST',
