@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  phoneType: {
+    type: String,
+    enum: ['Android', 'iOS'],
+    default: 'Android',
+  },
   isDeleted: {
     type: Boolean,
     default: false,

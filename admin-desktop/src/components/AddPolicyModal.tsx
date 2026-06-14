@@ -12,12 +12,15 @@ interface AddPolicyModalProps {
 const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
   const [formData, setFormData] = useState({
     clientName: '',
+    policyHolderName: '',
     mobileNumber: '',
     clientEmail: '',
-    policyType: '',
+    policyType: 'Motor',
+    vehicleType: '',
     vehicleNumber: '',
+    policyNumber: '',
     insurer: '',
-    issueDate: '',
+    issueDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
     sumInsured: '',
     annualPremium: '',
@@ -26,6 +29,7 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
 
   if (!isOpen) return null;
 
@@ -35,7 +39,9 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFormData({ ...formData, attachedDocument: e.target.files[0].name });
+      const file = e.target.files[0];
+      setDocumentFile(file);
+      setFormData({ ...formData, attachedDocument: file.name });
     }
   };
 
@@ -44,26 +50,36 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const randomID = Math.floor(1000 + Math.random() * 9000);
-      const generatedPolicyNumber = `${formData.policyType.toUpperCase().substring(0, 3)}-${randomID}`;
-      
-      const dataToSubmit = { 
-        ...formData, 
-        policyNumber: generatedPolicyNumber 
-      };
+      const dataToSubmit = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'vehicleType' && formData.policyType !== 'Motor') return;
+        if (key === 'vehicleNumber' && formData.policyType !== 'Motor') return;
+        dataToSubmit.append(key, value);
+      });
 
-      if (dataToSubmit.policyType === 'Motor') {
-        dataToSubmit.sumInsured = '0'; 
+      if (documentFile) {
+        dataToSubmit.append('document', documentFile);
+      } else {
+        setErrorMsg('Please upload a policy document.');
+        setLoading(false);
+        return;
       }
-      await axios.post(API_URL, dataToSubmit);
+
+      await axios.post(API_URL, dataToSubmit, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'X-API-Key': '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a92'
+        }
+      });
       alert('Policy saved successfully!');
       setFormData({
-        clientName: '', mobileNumber: '', clientEmail: '', policyType: '',
-        vehicleNumber: '', insurer: '', issueDate: '', expiryDate: '',
+        clientName: '', policyHolderName: '', mobileNumber: '', clientEmail: '', policyType: 'Motor',
+        vehicleType: '', vehicleNumber: '', policyNumber: '', insurer: '', issueDate: new Date().toISOString().split('T')[0], expiryDate: '',
         sumInsured: '', annualPremium: '', attachedDocument: ''
       });
+      setDocumentFile(null);
       onClose();
-      window.location.reload(); 
+      window.location.reload();
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.response?.data?.error || 'Failed to save policy');
@@ -88,13 +104,17 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
         {errorMsg && <div style={{ background: 'var(--accent-danger)', color: '#fff', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{errorMsg}</div>}
 
         <form onSubmit={handleSubmit} className="flex-col gap-4">
-          
+
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ color: 'var(--accent-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>1. Client Details</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Full Name *</label>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Client Name *</label>
                 <input type="text" name="clientName" value={formData.clientName} onChange={handleChange} required style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Policy Holder Name *</label>
+                <input type="text" name="policyHolderName" value={formData.policyHolderName} onChange={handleChange} required style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Mobile Number *</label>
@@ -109,7 +129,7 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
 
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ color: 'var(--accent-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>2. Policy Details</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Policy Type *</label>
                 <select name="policyType" value={formData.policyType} onChange={handleChange} required style={{ width: '100%' }}>
@@ -120,21 +140,31 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
                 </select>
               </div>
               {isMotor && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vehicle Number *</label>
-                  <input type="text" name="vehicleNumber" value={formData.vehicleNumber} onChange={handleChange} required style={{ width: '100%' }} />
-                </div>
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vehicle Type *</label>
+                    <input type="text" name="vehicleType" value={formData.vehicleType} onChange={handleChange} required style={{ width: '100%' }} placeholder="Enter Vehicle Type" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Vehicle Number *</label>
+                    <input type="text" name="vehicleNumber" value={formData.vehicleNumber} onChange={handleChange} required style={{ width: '100%' }} />
+                  </div>
+                </>
               )}
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Insurer Company *</label>
                 <input type="text" name="insurer" value={formData.insurer} onChange={handleChange} required style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Policy Number *</label>
+                <input type="text" name="policyNumber" value={formData.policyNumber} onChange={handleChange} required style={{ width: '100%' }} placeholder="Enter Policy Number" />
               </div>
             </div>
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ color: 'var(--accent-gold)', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>3. Financials & Dates</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Issue Date *</label>
                 <input type="date" name="issueDate" value={formData.issueDate} onChange={handleChange} required style={{ width: '100%' }} />

@@ -159,7 +159,7 @@ router.post('/verify-otp', async (req, res) => {
 
 // POST /register-otp
 router.post('/register-otp', async (req, res) => {
-  const { mobile, otp, name, email } = req.body;
+  const { mobile, otp, name, email, phoneType } = req.body;
   if (!mobile || !otp || !name) {
     return res.status(400).json({ success: false, error: 'Mobile, OTP and name are required' });
   }
@@ -175,10 +175,21 @@ router.post('/register-otp', async (req, res) => {
       return res.status(409).json({ success: false, error: 'User already exists' });
     }
 
+    let detectedPhoneType = phoneType;
+    if (!detectedPhoneType) {
+      const userAgent = req.headers['user-agent'] || '';
+      if (userAgent.toLowerCase().includes('iphone') || userAgent.toLowerCase().includes('ipad') || userAgent.toLowerCase().includes('ios') || userAgent.toLowerCase().includes('cfnetwork') || userAgent.toLowerCase().includes('darwin')) {
+        detectedPhoneType = 'iOS';
+      } else {
+        detectedPhoneType = 'Android';
+      }
+    }
+
     const newUser = new User({
       mobile,
       email: email ? email.toLowerCase().trim() : '',
-      name: name.trim()
+      name: name.trim(),
+      phoneType: detectedPhoneType
     });
 
     await newUser.save();
@@ -221,7 +232,7 @@ router.post('/check-user', async (req, res) => {
 
 // POST /register
 router.post('/register', async (req, res) => {
-  const { mobile, email, password, name } = req.body;
+  const { mobile, email, password, name, phoneType } = req.body;
 
   if (!mobile || !email || !password || !name) {
     return res.status(400).json({ success: false, error: 'All fields are required' });
@@ -233,12 +244,23 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ success: false, error: 'User already exists' });
     }
 
+    let detectedPhoneType = phoneType;
+    if (!detectedPhoneType) {
+      const userAgent = req.headers['user-agent'] || '';
+      if (userAgent.toLowerCase().includes('iphone') || userAgent.toLowerCase().includes('ipad') || userAgent.toLowerCase().includes('ios') || userAgent.toLowerCase().includes('cfnetwork') || userAgent.toLowerCase().includes('darwin')) {
+        detectedPhoneType = 'iOS';
+      } else {
+        detectedPhoneType = 'Android';
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       mobile,
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      name: name.trim()
+      name: name.trim(),
+      phoneType: detectedPhoneType
     });
     
     await newUser.save();

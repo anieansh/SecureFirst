@@ -9,11 +9,23 @@ const API_KEY = '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a9
 axios.interceptors.request.use((config) => {
   config.headers['X-API-Key'] = API_KEY;
   const token = localStorage.getItem('adminToken');
-  if (token) {
+  if (token && token !== 'undefined' && token !== 'null') {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// Response interceptor to handle session expiration / invalid tokens
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('adminToken');
+      window.location.href = '#/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

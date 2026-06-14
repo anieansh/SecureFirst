@@ -29,7 +29,8 @@ const requireMobileUser = async (req, res, next) => {
     const adminOnlyPaths = [
       '/policies',
       '/clients',
-      '/client'
+      '/client',
+      '/users'
     ];
 
     const isMatchAdminOnly = adminOnlyPaths.some(p => req.path === p || req.path.startsWith(p + '/'));

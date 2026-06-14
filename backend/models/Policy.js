@@ -5,6 +5,10 @@ const policySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  policyHolderName: {
+    type: String,
+    required: true,
+  },
   mobileNumber: {
     type: String,
     required: true,
@@ -17,6 +21,12 @@ const policySchema = new mongoose.Schema({
     type: String,
     enum: ['Motor', 'Home', 'Travel'],
     required: true,
+  },
+  vehicleType: {
+    type: String,
+    required: function() {
+      return this.policyType === 'Motor';
+    }
   },
   vehicleNumber: {
     type: String,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, Users, FilePlus, Settings, ShieldCheck, Sun, Moon, ListPlus } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Settings, ShieldCheck, Sun, Moon, ListPlus, User } from 'lucide-react';
 
 const Sidebar = ({ onAddPolicy }: { onAddPolicy?: () => void }) => {
   const menuItems = [
@@ -8,7 +8,8 @@ const Sidebar = ({ onAddPolicy }: { onAddPolicy?: () => void }) => {
     { name: 'Policies', path: '/policies', icon: FileText },
     { name: 'Clients', path: '/clients', icon: Users },
     { name: 'Leads', path: '/leads', icon: ListPlus },
-    { name: 'Add Policy', path: '#', icon: FilePlus }, // path is fake
+    // { name: 'Add Policy', path: '#', icon: FilePlus },
+    { name: 'Users', path: '/users', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 

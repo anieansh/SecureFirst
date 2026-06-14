@@ -141,3 +141,26 @@ th {
 .gap-4 { gap: 1rem; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
+
+/* Sticky columns for tables */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background-color: var(--bg-secondary) !important;
+  z-index: 2;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+}
+
+th.sticky-col {
+  z-index: 3;
+}
+
+/* Style calendar picker icons dynamically based on dark/light theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+}

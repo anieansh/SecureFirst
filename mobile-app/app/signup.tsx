@@ -39,7 +39,8 @@ export default function SignupScreen() {
         mobile,
         otp,
         email: email.trim(), 
-        name: name.trim() 
+        name: name.trim(),
+        phoneType: Platform.OS === 'ios' ? 'iOS' : 'Android'
       });
 
       if (res.data.success) {

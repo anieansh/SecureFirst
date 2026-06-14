@@ -37,7 +37,7 @@ const upload = multer({
 
 // POST /policy → add policy
 router.post('/policy', upload.single('document'), async (req, res) => {
-  let { clientName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber } = req.body;
+  let { clientName, policyHolderName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber, vehicleType } = req.body;
 
   const attachedDocument = req.file ? req.file.filename : req.body.attachedDocument;
 
@@ -46,9 +46,12 @@ router.post('/policy', upload.single('document'), async (req, res) => {
     if (!vehicleNumber) {
       return res.status(400).json({ success: false, error: 'vehicleNumber is required for Motor policies' });
     }
+    if (!vehicleType) {
+      return res.status(400).json({ success: false, error: 'vehicleType is required for Motor policies' });
+    }
   }
 
-  if (!clientName || !mobileNumber || !policyType || !policyNumber || !insurer || !issueDate || !expiryDate || sumInsured === undefined || sumInsured === '' || annualPremium === undefined || annualPremium === '' || !attachedDocument) {
+  if (!clientName || !policyHolderName || !mobileNumber || !policyType || !policyNumber || !insurer || !issueDate || !expiryDate || sumInsured === undefined || sumInsured === '' || annualPremium === undefined || annualPremium === '' || !attachedDocument) {
     return res.status(400).json({ success: false, error: 'Missing required fields including attached document' });
   }
 
@@ -67,6 +70,7 @@ router.post('/policy', upload.single('document'), async (req, res) => {
   try {
     const newPolicy = new Policy({
       clientName,
+      policyHolderName,
       mobileNumber,
       clientEmail,
       policyType,
@@ -77,7 +81,8 @@ router.post('/policy', upload.single('document'), async (req, res) => {
       sumInsured: Number(sumInsured),
       annualPremium: Number(annualPremium),
       attachedDocument,
-      vehicleNumber: policyType === 'Motor' ? vehicleNumber : undefined
+      vehicleNumber: policyType === 'Motor' ? vehicleNumber : undefined,
+      vehicleType: policyType === 'Motor' ? vehicleType : undefined
     });
 
     await newPolicy.save();
@@ -92,8 +97,6 @@ router.post('/policy', upload.single('document'), async (req, res) => {
         cleanMobile = '91' + cleanMobile;
       }
 
-      const vehicleVal = vehicleNumber || 'N/A';
-
       const formatDateStr = (dateVal) => {
         if (!dateVal) return 'N/A';
         const d = new Date(dateVal);
@@ -106,13 +109,14 @@ router.post('/policy', upload.single('document'), async (req, res) => {
 
       const aisensyPayload = {
         apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZmY1OGVkYWIwYjRhNTMyOTE5MGMxMCIsIm5hbWUiOiJTRUNVUkUgRklSU1QiLCJhcHBOYW1lIjoiQWlTZW5zeSIsImNsaWVudElkIjoiNjlmZjU4ZWRhYjBiNGE1MzI5MTkwYzBiIiwiYWN0aXZlUGxhbiI6IkZSRUVfRk9SRVZFUiIsImlhdCI6MTc3ODM0MjEyNX0.rIewZkqrioMIeasLLk_KVmFZCvqC7gxOd0wZMbIxkEY",
-        campaignName: "welcome to secure first",
+        campaignName: "welcome msg 6",
         destination: cleanMobile,
         userName: clientName,
         templateParams: [
-          clientName,
-          vehicleVal,
-          insurer,
+          policyHolderName || clientName,
+          vehicleType || 'N/A',
+          vehicleNumber || 'N/A',
+          insurer || 'N/A',
           formatDateStr(issueDate),
           formatDateStr(expiryDate)
         ],
@@ -127,7 +131,7 @@ router.post('/policy', upload.single('document'), async (req, res) => {
         }
       };
 
-      console.log(`[Aisensy Policy Welcome] Triggering campaign "welcome to secure first" for ${cleanMobile} (${clientName})`);
+      console.log(`[Aisensy Policy Welcome] Triggering campaign "welcome msg 6" for ${cleanMobile} (Holder: ${policyHolderName || clientName})`);
 
       const aisensyRes = await fetch("https://backend.aisensy.com/campaign/t1/api/v2", {
         method: 'POST',
@@ -228,7 +232,8 @@ router.get('/clients', async (req, res) => {
         mobileNumber: c.mobileNumber,
         email: c.email || 'N/A',
         numberOfPolicies: c.numberOfPolicies,
-        status
+        status,
+        policies: c.policies
       };
     });
 
@@ -374,6 +379,18 @@ router.delete('/policy/:id', async (req, res) => {
   } catch (err) {
     console.error('[Policy] Error deleting single policy:', err);
     res.status(500).json({ success: false, error: 'Failed to delete policy' });
+  }
+});
+
+// GET /users → get all app users (Admin only)
+router.get('/users', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const users = await User.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: users });
+  } catch (err) {
+    console.error('[Admin] Error fetching app users:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch users' });
   }
 });
 

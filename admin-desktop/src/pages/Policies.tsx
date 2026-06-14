@@ -27,15 +27,24 @@ const Policies = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<string | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Policy details modal state (Client name click)
+  const [detailPolicy, setDetailPolicy] = useState<any | null>(null);
+
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     clientName: '',
+    policyHolderName: '',
     mobileNumber: '',
     clientEmail: '',
     policyType: 'Motor',
+    vehicleType: '',
     vehicleNumber: '',
     policyNumber: '',
     insurer: '',
@@ -108,9 +117,11 @@ const Policies = () => {
     setDocumentFile(null);
     setFormData({
       clientName: policy.clientName,
+      policyHolderName: policy.policyHolderName || '',
       mobileNumber: policy.mobileNumber,
       clientEmail: policy.clientEmail || '',
       policyType: policy.policyType,
+      vehicleType: policy.vehicleType || '',
       vehicleNumber: policy.vehicleNumber || '',
       policyNumber: policy.policyNumber,
       insurer: policy.insurer,
@@ -173,40 +184,133 @@ const Policies = () => {
     }
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter, itemsPerPage]);
+
   const filteredPolicies = policies.filter(p => {
     const matchesFilter = filter === 'All' || p.status === filter;
-    const matchesSearch = p.clientName.toLowerCase().includes(search.toLowerCase()) || p.mobileNumber.includes(search);
+    const matchesSearch = p.clientName.toLowerCase().includes(search.toLowerCase()) || 
+                          p.mobileNumber.includes(search) || 
+                          (p.policyHolderName && p.policyHolderName.toLowerCase().includes(search.toLowerCase()));
     return matchesFilter && matchesSearch;
   });
+
+  const totalItems = filteredPolicies.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPolicies = filteredPolicies.slice(indexOfFirstItem, indexOfLastItem);
+
+  if (detailPolicy) {
+    return (
+      <div className="flex-col gap-4">
+        {/* Back Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+          <button 
+            onClick={() => setDetailPolicy(null)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--accent-gold)', 
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '1.1rem', fontWeight: 600, padding: 0
+            }}
+          >
+            &larr; Back to Policies
+          </button>
+        </div>
+
+        {/* Policy Details Card */}
+        <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem' }}>
+            <div>
+              <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', fontWeight: 700, color: '#1DD3B0' }}>Policy: {detailPolicy.policyNumber}</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Full policy details and coverage parameters</p>
+            </div>
+            <div>
+              <span className={`badge ${detailPolicy.policyType.toLowerCase()}`} style={{ fontSize: '0.9rem', padding: '0.4rem 1rem', background: 'rgba(29, 211, 176, 0.1)', color: '#1DD3B0', border: '1px solid #1DD3B0' }}>
+                {detailPolicy.policyType}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '2rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Policy Holder Name</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.policyHolderName || 'N/A'}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Client Name</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.clientName}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Mobile Number</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.mobileNumber}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Policy Type</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.policyType}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Insurer Company</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.insurer}</div>
+            </div>
+            {detailPolicy.policyType === 'Motor' && (
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Vehicle Number</label>
+                  <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.vehicleNumber || 'N/A'}</div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Vehicle Type</label>
+                  <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{detailPolicy.vehicleType || 'N/A'}</div>
+                </div>
+              </>
+            )}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Issue Date</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{new Date(detailPolicy.issueDate).toLocaleDateString()}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Expiry Date</label>
+              <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{new Date(detailPolicy.expiryDate).toLocaleDateString()}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Sum Insured</label>
+              <div style={{ fontSize: '1.3rem', color: 'var(--accent-gold)', fontWeight: 700 }}>₹{detailPolicy.sumInsured ? detailPolicy.sumInsured.toLocaleString() : '0'}</div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Annual Premium</label>
+              <div style={{ fontSize: '1.3rem', color: 'var(--accent-gold)', fontWeight: 700 }}>₹{detailPolicy.annualPremium ? detailPolicy.annualPremium.toLocaleString() : '0'}</div>
+            </div>
+          </div>
+
+          {detailPolicy.attachedDocument && (
+            <div style={{ marginTop: '2.5rem', padding: '1.5rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Attached Policy Document</span>
+                <span style={{ fontSize: '1rem', color: '#fff', fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '400px' }}>
+                  {detailPolicy.attachedDocument}
+                </span>
+              </div>
+              <button 
+                onClick={() => handleDownloadPolicy(detailPolicy)}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', backgroundColor: '#1DD3B0', color: '#000', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+              >
+                <Download size={16} /> Download Document
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-col gap-4">
       <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '2rem' }}>Policy Portfolio</h2>
-        <button 
-          onClick={() => {
-            setSelectedPolicy(null);
-            setDocumentFile(null);
-            setFormData({
-              clientName: '',
-              mobileNumber: '',
-              clientEmail: '',
-              policyType: 'Motor',
-              vehicleNumber: '',
-              policyNumber: '',
-              insurer: '',
-              issueDate: new Date().toISOString().split('T')[0],
-              expiryDate: '',
-              sumInsured: '',
-              annualPremium: '',
-            });
-            setIsEditModalOpen(true);
-          }}
-          className="btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <PlusCircle size={20} /> Add Policy
-        </button>
+        {/* Top-right Add Policy button removed, replaced with bottom-right FAB */}
       </div>
 
       <div className="glass-panel" style={{ marginBottom: '2rem' }}>
@@ -215,7 +319,7 @@ const Policies = () => {
             <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input 
               type="text" 
-              placeholder="Search by client name or mobile..." 
+              placeholder="Search by client, policy holder or mobile..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ paddingLeft: '2.5rem', marginBottom: 0 }}
@@ -235,87 +339,151 @@ const Policies = () => {
               <option value="Expired">Expired</option>
             </select>
           </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Show:</span>
+            <select 
+              value={itemsPerPage} 
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              style={{ width: '80px', padding: '0.4rem', borderRadius: '6px', backgroundColor: '#16191e', color: '#fff', border: '1px solid var(--border-light)', cursor: 'pointer', margin: 0 }}
+            >
+              {[10, 20, 30, 40, 50, 100].map(val => (
+                <option key={val} value={val}>{val}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="table-wrapper">
           {loading ? (
             <p>Loading policies...</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Client Name</th>
-                  <th>Mobile Number</th>
-                  <th>Policy Type</th>
-                  <th>Vehicle Num</th>
-                  <th>Expiry Date</th>
-                  <th>Premium</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPolicies.map((p) => (
-                  <tr key={p._id}>
-                    <td style={{ fontWeight: 500 }}>{p.clientName}</td>
-                    <td>{p.mobileNumber}</td>
-                    <td>{p.policyType}</td>
-                    <td>{p.vehicleNumber || '-'}</td>
-                    <td>{new Date(p.expiryDate).toLocaleDateString()}</td>
-                    <td>₹{p.annualPremium.toLocaleString()}</td>
-                    <td>
-                      <span className={`badge ${p.status.toLowerCase()}`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td style={{ position: 'relative', zIndex: openDropdownId === p._id ? 50 : 1 }} className="action-menu-container">
-                      <div className="flex gap-3" style={{ justifyContent: 'center' }}>
-                        <button 
-                          onClick={() => setOpenDropdownId(openDropdownId === p._id ? null : p._id)}
-                          style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
-                        >
-                          <MoreVertical size={20} />
-                        </button>
-                        {openDropdownId === p._id && (
-                          <div style={{ 
-                            position: 'absolute', right: '50%', top: '70%', 
-                            backgroundColor: '#16191e', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '8px', padding: '0.5rem', zIndex: 10,
-                            display: 'flex', flexDirection: 'column', gap: '0.5rem',
-                            minWidth: '160px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-                          }}>
-                            <button 
-                              onClick={() => { handleDownloadPolicy(p); setOpenDropdownId(null); }}
-                              style={{ background: 'none', border: 'none', color: '#1DD3B0', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
-                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <Download size={16} /> Download Policy
-                            </button>
-                            <button 
-                              onClick={() => { handleEditClick(p); setOpenDropdownId(null); }}
-                              style={{ background: 'none', border: 'none', color: 'var(--accent-gold)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
-                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <Edit3 size={16} /> Edit
-                            </button>
-                            <button 
-                              onClick={() => { handleDeleteClick(p._id); setOpenDropdownId(null); }}
-                              style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
-                              onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
-                              onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <Trash2 size={16} /> Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th className="sticky-col">Client Name</th>
+                    <th>Policy Holder</th>
+                    <th>Vehicle Type</th>
+                    <th>Vehicle Num</th>
+                    <th>Expiry Date</th>
+                    <th>Premium</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {currentPolicies.map((p) => (
+                    <tr key={p._id}>
+                      <td className="sticky-col" style={{ fontWeight: 500, color: 'var(--accent-gold)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setDetailPolicy(p)}>
+                        {p.clientName}
+                      </td>
+                      <td>{p.policyHolderName || 'N/A'}</td>
+                      <td>{p.vehicleType || '-'}</td>
+                      <td>{p.vehicleNumber || '-'}</td>
+                      <td>{new Date(p.expiryDate).toLocaleDateString()}</td>
+                      <td>₹{p.annualPremium.toLocaleString()}</td>
+                      <td>
+                        <span className={`badge ${p.status.toLowerCase()}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td style={{ position: 'relative', zIndex: openDropdownId === p._id ? 50 : 1 }} className="action-menu-container">
+                        <div className="flex gap-3" style={{ justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => setOpenDropdownId(openDropdownId === p._id ? null : p._id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+                          >
+                            <MoreVertical size={20} />
+                          </button>
+                          {openDropdownId === p._id && (
+                            <div style={{ 
+                              position: 'absolute', right: '50%', top: '70%', 
+                              backgroundColor: '#16191e', border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px', padding: '0.5rem', zIndex: 10,
+                              display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                              minWidth: '160px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                            }}>
+                              <button 
+                                onClick={() => { handleDownloadPolicy(p); setOpenDropdownId(null); }}
+                                style={{ background: 'none', border: 'none', color: '#1DD3B0', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <Download size={16} /> Download Policy
+                              </button>
+                              <button 
+                                onClick={() => { handleEditClick(p); setOpenDropdownId(null); }}
+                                style={{ background: 'none', border: 'none', color: 'var(--accent-gold)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <Edit3 size={16} /> Edit
+                              </button>
+                              <button 
+                                onClick={() => { handleDeleteClick(p._id); setOpenDropdownId(null); }}
+                                style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', borderRadius: '4px' }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <Trash2 size={16} /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {currentPolicies.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        No policies found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '1.5rem 0 0', borderTop: '1px solid var(--border-light)' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    Showing {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, totalItems)} of {totalItems} policies
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button 
+                      onClick={() => { if (currentPage > 1) setCurrentPage(currentPage - 1); }} 
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-light)',
+                        backgroundColor: currentPage === 1 ? 'transparent' : '#16191e',
+                        color: currentPage === 1 ? 'var(--text-secondary)' : '#fff',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: currentPage === 1 ? 0.4 : 1
+                      }}
+                    >
+                      Prev
+                    </button>
+                    
+                    <span style={{ color: '#fff', fontSize: '0.95rem', padding: '0 0.5rem' }}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button 
+                      onClick={() => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); }} 
+                      disabled={currentPage === totalPages}
+                      style={{
+                        padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-light)',
+                        backgroundColor: currentPage === totalPages ? 'transparent' : '#16191e',
+                        color: currentPage === totalPages ? 'var(--text-secondary)' : '#fff',
+                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '0.9rem', opacity: currentPage === totalPages ? 0.4 : 1
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -344,10 +512,14 @@ const Policies = () => {
               {/* Section 1: Client Details */}
               <div className="flex-col gap-6">
                 <h4 style={{ color: '#1DD3B0', fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>1. Client Details</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   <div className="flex-col gap-2">
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Full Name *</label>
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Client Name *</label>
                     <input required value={formData.clientName} onChange={e => setFormData({...formData, clientName: e.target.value})} style={{ backgroundColor: '#16191e' }} />
+                  </div>
+                  <div className="flex-col gap-2">
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Policy Holder Name *</label>
+                    <input required value={formData.policyHolderName} onChange={e => setFormData({...formData, policyHolderName: e.target.value})} style={{ backgroundColor: '#16191e' }} />
                   </div>
                   <div className="flex-col gap-2">
                     <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Mobile Number *</label>
@@ -378,9 +550,15 @@ const Policies = () => {
                   </div>
                 </div>
                 {formData.policyType === 'Motor' && (
-                  <div className="flex-col gap-2" style={{ maxWidth: '300px' }}>
-                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Vehicle Number *</label>
-                    <input required value={formData.vehicleNumber} onChange={e => setFormData({...formData, vehicleNumber: e.target.value})} style={{ backgroundColor: '#16191e' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div className="flex-col gap-2">
+                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Vehicle Type *</label>
+                      <input required value={formData.vehicleType} onChange={e => setFormData({...formData, vehicleType: e.target.value})} style={{ backgroundColor: '#16191e' }} placeholder="Enter Vehicle Type" />
+                    </div>
+                    <div className="flex-col gap-2">
+                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Vehicle Number *</label>
+                      <input required value={formData.vehicleNumber} onChange={e => setFormData({...formData, vehicleNumber: e.target.value})} style={{ backgroundColor: '#16191e' }} />
+                    </div>
                   </div>
                 )}
                 <div className="flex-col gap-2">
@@ -469,6 +647,40 @@ const Policies = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Action Button (FAB) for adding policy */}
+      <button 
+        onClick={() => {
+          setSelectedPolicy(null);
+          setDocumentFile(null);
+          setFormData({
+            clientName: '',
+            policyHolderName: '',
+            mobileNumber: '',
+            clientEmail: '',
+            policyType: 'Motor',
+            vehicleType: '',
+            vehicleNumber: '',
+            policyNumber: '',
+            insurer: '',
+            issueDate: new Date().toISOString().split('T')[0],
+            expiryDate: '',
+            sumInsured: '',
+            annualPremium: '',
+          });
+          setIsEditModalOpen(true);
+        }}
+        className="btn-primary"
+        style={{ 
+          position: 'fixed', bottom: '2rem', right: '2rem', 
+          borderRadius: '50%', width: '56px', height: '56px', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px rgba(29, 211, 176, 0.4)', zIndex: 99
+        }}
+        title="Add Policy"
+      >
+        <PlusCircle size={28} />
+      </button>
     </div>
   );
 };
