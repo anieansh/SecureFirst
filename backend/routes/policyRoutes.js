@@ -17,8 +17,12 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'policy-' + uniqueSuffix + path.extname(file.originalname));
+    if (file.fieldname === 'supportingDocument') {
+      cb(null, file.originalname);
+    } else {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'policy-' + uniqueSuffix + path.extname(file.originalname));
+    }
   }
 });
 
@@ -36,10 +40,16 @@ const upload = multer({
 });
 
 // POST /policy → add policy
-router.post('/policy', upload.single('document'), async (req, res) => {
-  let { clientName, policyHolderName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber, vehicleType } = req.body;
+router.post('/policy', upload.fields([
+  { name: 'document', maxCount: 1 },
+  { name: 'supportingDocument', maxCount: 1000 }
+]), async (req, res) => {
+  let { clientName, policyHolderName, mobileNumber, clientEmail, policyType, policyNumber, insurer, issueDate, expiryDate, sumInsured, annualPremium, vehicleNumber, vehicleType, productType, coverageType } = req.body;
 
-  const attachedDocument = req.file ? req.file.filename : req.body.attachedDocument;
+  const attachedDocument = req.files && req.files['document'] ? req.files['document'][0].filename : req.body.attachedDocument;
+  const supportingDocument = req.files && req.files['supportingDocument'] 
+    ? JSON.stringify(req.files['supportingDocument'].map(f => f.filename)) 
+    : req.body.supportingDocument;
 
   if (policyType === 'Motor') {
     sumInsured = sumInsured || 0;
@@ -48,6 +58,15 @@ router.post('/policy', upload.single('document'), async (req, res) => {
     }
     if (!vehicleType) {
       return res.status(400).json({ success: false, error: 'vehicleType is required for Motor policies' });
+    }
+  }
+
+  if (policyType === 'Non Motor') {
+    if (!productType) {
+      return res.status(400).json({ success: false, error: 'productType is required for Non Motor policies' });
+    }
+    if (!coverageType) {
+      return res.status(400).json({ success: false, error: 'coverageType is required for Non Motor policies' });
     }
   }
 
@@ -81,8 +100,11 @@ router.post('/policy', upload.single('document'), async (req, res) => {
       sumInsured: Number(sumInsured),
       annualPremium: Number(annualPremium),
       attachedDocument,
+      supportingDocument: (policyType === 'Motor' || policyType === 'Non Motor') ? supportingDocument : undefined,
       vehicleNumber: policyType === 'Motor' ? vehicleNumber : undefined,
-      vehicleType: policyType === 'Motor' ? vehicleType : undefined
+      vehicleType: policyType === 'Motor' ? vehicleType : undefined,
+      productType: policyType === 'Non Motor' ? productType : undefined,
+      coverageType: policyType === 'Non Motor' ? coverageType : undefined
     });
 
     await newPolicy.save();
@@ -345,12 +367,37 @@ router.put('/client/:mobile', async (req, res) => {
 });
 
 // PUT /policy/:id → update a policy
-router.put('/policy/:id', upload.single('document'), async (req, res) => {
+router.put('/policy/:id', upload.fields([
+  { name: 'document', maxCount: 1 },
+  { name: 'supportingDocument', maxCount: 1000 }
+]), async (req, res) => {
   const { id } = req.params;
   const updateData = { ...req.body };
 
-  if (req.file) {
-    updateData.attachedDocument = req.file.filename;
+  if (req.files) {
+    if (req.files['document']) {
+      updateData.attachedDocument = req.files['document'][0].filename;
+    }
+    if (req.files['supportingDocument']) {
+      updateData.supportingDocument = JSON.stringify(req.files['supportingDocument'].map(f => f.filename));
+    }
+  }
+
+  // Clear mismatched fields if policyType changed or is provided
+  if (updateData.policyType) {
+    if (updateData.policyType === 'Motor') {
+      updateData.productType = null;
+      updateData.coverageType = null;
+    } else if (updateData.policyType === 'Non Motor') {
+      updateData.vehicleNumber = null;
+      updateData.vehicleType = null;
+    } else {
+      updateData.vehicleNumber = null;
+      updateData.vehicleType = null;
+      updateData.productType = null;
+      updateData.coverageType = null;
+      updateData.supportingDocument = null;
+    }
   }
 
   try {

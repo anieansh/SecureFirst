@@ -22,7 +22,7 @@ export default function NewPolicyScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [name, setName] = useState('');
-  const [policyType, setPolicyType] = useState('Motor'); // Motor, Home, Travel
+  const [policyType, setPolicyType] = useState('Motor'); // Motor, Non Motor, Travel
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -162,7 +162,7 @@ export default function NewPolicyScreen() {
     }
   };
 
-  const types = ['Motor', 'Home', 'Travel'];
+  const types = ['Motor', 'Non Motor', 'Travel'];
   const conditions = ['New', 'Old'];
 
   if (success) {

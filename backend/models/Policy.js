@@ -19,7 +19,7 @@ const policySchema = new mongoose.Schema({
   },
   policyType: {
     type: String,
-    enum: ['Motor', 'Home', 'Travel'],
+    enum: ['Motor', 'Non Motor', 'Travel'],
     required: true,
   },
   vehicleType: {
@@ -33,6 +33,21 @@ const policySchema = new mongoose.Schema({
     required: function() {
       return this.policyType === 'Motor';
     }
+  },
+  productType: {
+    type: String,
+    required: function() {
+      return this.policyType === 'Non Motor';
+    }
+  },
+  coverageType: {
+    type: String,
+    required: function() {
+      return this.policyType === 'Non Motor';
+    }
+  },
+  supportingDocument: {
+    type: String,
   },
   policyNumber: {
     type: String,

@@ -24,6 +24,8 @@ const Leads = () => {
     clientEmail: '',
     policyType: 'Motor',
     vehicleNumber: '',
+    productType: '',
+    coverageType: '',
     policyNumber: '',
     insurer: '',
     issueDate: '',
@@ -31,6 +33,8 @@ const Leads = () => {
     sumInsured: '',
     annualPremium: '',
   });
+
+  const [supportingDocumentFiles, setSupportingDocumentFiles] = useState<File[]>([]);
 
   // Edit Lead State
   const [isEditLeadModalOpen, setIsEditLeadModalOpen] = useState(false);
@@ -71,12 +75,15 @@ const Leads = () => {
 
   const handleAddPolicy = (lead: any) => {
     setDocumentFile(null);
+    setSupportingDocumentFiles([]);
     setFormData({
       clientName: lead.name,
       mobileNumber: lead.mobileNumber,
       clientEmail: '',
       policyType: lead.policyType || 'Motor',
       vehicleNumber: lead.vehicleNumber || '',
+      productType: '',
+      coverageType: '',
       policyNumber: '',
       insurer: '',
       issueDate: new Date().toISOString().split('T')[0],
@@ -85,6 +92,24 @@ const Leads = () => {
       annualPremium: '',
     });
     setIsModalOpen(true);
+  };
+
+  const handleSupportingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSupportingDocumentFiles(prev => {
+        const combined = [...prev, ...newFiles];
+        const unique = combined.filter((file, index, self) =>
+          self.findIndex(f => f.name === file.name && f.size === file.size) === index
+        );
+        return unique;
+      });
+    }
+    e.target.value = '';
+  };
+
+  const removeSupportingFile = (index: number) => {
+    setSupportingDocumentFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleEditLead = (lead: any) => {
@@ -145,9 +170,15 @@ const Leads = () => {
 
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
+      if (key === 'vehicleNumber' && formData.policyType !== 'Motor') return;
+      if (key === 'productType' && formData.policyType !== 'Non Motor') return;
+      if (key === 'coverageType' && formData.policyType !== 'Non Motor') return;
       data.append(key, value);
     });
     data.append('document', documentFile);
+    supportingDocumentFiles.forEach(file => {
+      data.append('supportingDocument', file);
+    });
 
     try {
       console.log('Submitting Policy Data:', formData);
@@ -372,7 +403,7 @@ const Leads = () => {
                 <label>Policy Type</label>
                 <select value={editLeadData.policyType} onChange={e => setEditLeadData({...editLeadData, policyType: e.target.value})}>
                   <option value="Motor">Motor</option>
-                  <option value="Home">Home</option>
+                  <option value="Non Motor">Non Motor</option>
                   <option value="Travel">Travel</option>
                 </select>
               </div>
@@ -466,7 +497,7 @@ const Leads = () => {
                     <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Policy Type *</label>
                     <select value={formData.policyType} onChange={e => setFormData({...formData, policyType: e.target.value})} style={{ backgroundColor: '#16191e' }}>
                       <option value="Motor">Motor Insurance</option>
-                      <option value="Home">Home Insurance</option>
+                      <option value="Non Motor">Non Motor Insurance</option>
                       <option value="Travel">Travel Insurance</option>
                     </select>
                   </div>
@@ -475,6 +506,18 @@ const Leads = () => {
                     <input required value={formData.insurer} onChange={e => setFormData({...formData, insurer: e.target.value})} placeholder="e.g. HDFC Ergo, ICICI Lombard" style={{ backgroundColor: '#16191e' }} />
                   </div>
                 </div>
+                {formData.policyType === 'Non Motor' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+                    <div className="flex-col gap-2">
+                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Product Type *</label>
+                      <input required value={formData.productType} onChange={e => setFormData({...formData, productType: e.target.value})} style={{ backgroundColor: '#16191e' }} placeholder="Enter Product Type" />
+                    </div>
+                    <div className="flex-col gap-2">
+                      <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Coverage Type *</label>
+                      <input required value={formData.coverageType} onChange={e => setFormData({...formData, coverageType: e.target.value})} style={{ backgroundColor: '#16191e' }} placeholder="Enter Coverage Type" />
+                    </div>
+                  </div>
+                )}
                 {formData.policyType === 'Motor' && (
                   <div className="flex-col gap-2" style={{ maxWidth: '300px' }}>
                     <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Vehicle Number *</label>
@@ -522,6 +565,38 @@ const Leads = () => {
                   />
                 </div>
               </div>
+
+              {(formData.policyType === 'Motor' || formData.policyType === 'Non Motor') && (
+                <div className="flex-col gap-2">
+                  <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Supporting Documents (PDF/JPG/PNG) - Optional</label>
+                  <input 
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    multiple
+                    onChange={handleSupportingFileChange}
+                    style={{ backgroundColor: '#16191e', padding: '0.6rem' }} 
+                  />
+                  {supportingDocumentFiles.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {supportingDocumentFiles.map((file, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 1rem', backgroundColor: '#1a1d23', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+                          <span style={{ fontSize: '0.9rem', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                            {file.name}
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => removeSupportingFile(idx)} 
+                            style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                            title="Remove file"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-4" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2.5rem' }}>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary" style={{ flex: 1, padding: '1rem' }}>Discard</button>

@@ -9,3 +9,9 @@ coverage/
 *.exe
 *.dmg
 *.app/
+
+# Android build and local settings
+.gradle/
+.cxx/
+local.properties
+*.tar.gz

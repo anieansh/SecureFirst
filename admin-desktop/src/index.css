@@ -113,15 +113,35 @@ table {
 }
 
 th, td {
-  padding: 1rem;
+  padding: 0.6rem 0.4rem;
   text-align: center;
   border-bottom: 1px solid var(--border-light);
-  white-space: nowrap;
+  font-size: 0.85rem;
+  white-space: normal;
+  word-break: break-word;
 }
 
 th {
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+/* Make client name, policy holder name columns smaller and wrap neatly */
+td:first-child,
+td:nth-child(2),
+th:first-child,
+th:nth-child(2) {
+  font-size: 0.8rem;
+  max-width: 120px;
+}
+
+/* Prevent wrapping on short/formatted columns for readability */
+td:nth-child(5), /* Expiry Date */
+td:nth-child(6), /* Premium */
+td:nth-child(7), /* Status */
+.badge,
+.nowrap {
+  white-space: nowrap;
 }
 
 .badge {

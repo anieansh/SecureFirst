@@ -24,7 +24,7 @@ const samplePolicies = [
   // Other Admin Users (13 more policies)
   {
     clientName: 'Bob Smith', mobileNumber: '8888888888', clientEmail: 'bob@example.com',
-    policyType: 'Home', policyNumber: 'HOM-3001', insurer: 'HomeGuard',
+    policyType: 'Non Motor', policyNumber: 'HOM-3001', insurer: 'HomeGuard', productType: 'Property Insurance', coverageType: 'Fire & Theft', supportingDocument: 'sample_supporting.pdf', attachedDocument: 'sample.pdf',
     issueDate: new Date('2021-11-20').toISOString(), expiryDate: new Date(today - 5 * dayMs).toISOString(), sumInsured: 1000000, annualPremium: 15000
   },
   {
@@ -49,12 +49,11 @@ const samplePolicies = [
   },
   {
     clientName: 'Fiona Gallagher', mobileNumber: '4444444444', clientEmail: 'fiona@example.com',
-    policyType: 'Home', policyNumber: 'HOM-7001', insurer: 'HomeGuard',
+    policyType: 'Non Motor', policyNumber: 'HOM-7001', insurer: 'HomeGuard', productType: 'Liability Insurance', coverageType: 'General Liability', attachedDocument: 'fiona_doc.pdf',
     issueDate: new Date('2023-03-10').toISOString(), expiryDate: new Date(today + 14 * dayMs).toISOString(), sumInsured: 800000, annualPremium: 12500
-  },
-  {
+  },  {
     clientName: 'George Clooney', mobileNumber: '3333333333', clientEmail: 'george@example.com',
-    policyType: 'Home', policyNumber: 'HOM-8001', insurer: 'HomeGuard',
+    policyType: 'Non Motor', policyNumber: 'HOM-8001', insurer: 'HomeGuard', productType: 'Commercial Insurance', coverageType: 'Business Interruption', supportingDocument: 'business_supporting.pdf', attachedDocument: 'george_doc.pdf',
     issueDate: new Date('2019-08-20').toISOString(), expiryDate: new Date(today + 200 * dayMs).toISOString(), sumInsured: 2000000, annualPremium: 40000
   },
   {
@@ -79,7 +78,7 @@ const samplePolicies = [
   },
   {
     clientName: 'Laura Dern', mobileNumber: '1122334455', clientEmail: 'laura@example.com',
-    policyType: 'Home', policyNumber: 'HOM-4005', insurer: 'HomeGuard',
+    policyType: 'Non Motor', policyNumber: 'HOM-4005', insurer: 'HomeGuard', productType: 'Homeowners Insurance', coverageType: 'Structure & Contents', attachedDocument: 'laura_doc.pdf',
     issueDate: new Date('2022-11-10').toISOString(), expiryDate: new Date(today + 90 * dayMs).toISOString(), sumInsured: 1200000, annualPremium: 16000
   },
   {
@@ -94,8 +93,14 @@ mongoose.connect(MONGODB_URI)
     console.log('Connected to MongoDB. Clearing old data...');
     await Policy.deleteMany({});
     
-    console.log('Inserting expanded 15 sample policies...');
-    await Policy.insertMany(samplePolicies);
+    const validatedPolicies = samplePolicies.map(p => ({
+      ...p,
+      policyHolderName: p.policyHolderName || p.clientName,
+      vehicleType: (p.policyType === 'Motor' && !p.vehicleType) ? 'Sedan' : p.vehicleType,
+      vehicleNumber: (p.policyType === 'Motor' && !p.vehicleNumber) ? 'MH01AB1234' : p.vehicleNumber,
+      attachedDocument: p.attachedDocument || 'policy_sample.pdf'
+    }));
+    await Policy.insertMany(validatedPolicies);
     
     console.log('Seed successful! Added 15 policies across ' + [...new Set(samplePolicies.map(p => p.mobileNumber))].length + ' unique clients.');
     process.exit(0);

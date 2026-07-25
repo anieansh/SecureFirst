@@ -18,18 +18,22 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
     policyType: 'Motor',
     vehicleType: '',
     vehicleNumber: '',
+    productType: '',
+    coverageType: '',
     policyNumber: '',
     insurer: '',
     issueDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
     sumInsured: '',
     annualPremium: '',
-    attachedDocument: ''
+    attachedDocument: '',
+    supportingDocument: ''
   });
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [supportingDocumentFiles, setSupportingDocumentFiles] = useState<File[]>([]);
 
   if (!isOpen) return null;
 
@@ -45,6 +49,29 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
     }
   };
 
+  const handleSupportingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSupportingDocumentFiles(prev => {
+        const combined = [...prev, ...newFiles];
+        const unique = combined.filter((file, index, self) =>
+          self.findIndex(f => f.name === file.name && f.size === file.size) === index
+        );
+        setFormData(f => ({ ...f, supportingDocument: unique.map(x => x.name).join(', ') }));
+        return unique;
+      });
+    }
+    e.target.value = '';
+  };
+
+  const removeSupportingFile = (index: number) => {
+    setSupportingDocumentFiles(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      setFormData(f => ({ ...f, supportingDocument: next.map(x => x.name).join(', ') }));
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -54,6 +81,8 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
       Object.entries(formData).forEach(([key, value]) => {
         if (key === 'vehicleType' && formData.policyType !== 'Motor') return;
         if (key === 'vehicleNumber' && formData.policyType !== 'Motor') return;
+        if (key === 'productType' && formData.policyType !== 'Non Motor') return;
+        if (key === 'coverageType' && formData.policyType !== 'Non Motor') return;
         dataToSubmit.append(key, value);
       });
 
@@ -65,6 +94,10 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
         return;
       }
 
+      supportingDocumentFiles.forEach(file => {
+        dataToSubmit.append('supportingDocument', file);
+      });
+
       await axios.post(API_URL, dataToSubmit, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -74,10 +107,11 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
       alert('Policy saved successfully!');
       setFormData({
         clientName: '', policyHolderName: '', mobileNumber: '', clientEmail: '', policyType: 'Motor',
-        vehicleType: '', vehicleNumber: '', policyNumber: '', insurer: '', issueDate: new Date().toISOString().split('T')[0], expiryDate: '',
-        sumInsured: '', annualPremium: '', attachedDocument: ''
+        vehicleType: '', vehicleNumber: '', productType: '', coverageType: '', policyNumber: '', insurer: '', issueDate: new Date().toISOString().split('T')[0], expiryDate: '',
+        sumInsured: '', annualPremium: '', attachedDocument: '', supportingDocument: ''
       });
       setDocumentFile(null);
+      setSupportingDocumentFiles([]);
       onClose();
       window.location.reload();
     } catch (err: any) {
@@ -89,6 +123,7 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
   };
 
   const isMotor = formData.policyType === 'Motor';
+  const isNonMotor = formData.policyType === 'Non Motor';
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '4rem', zIndex: 1000, overflowY: 'auto' }}>
@@ -135,10 +170,22 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
                 <select name="policyType" value={formData.policyType} onChange={handleChange} required style={{ width: '100%' }}>
                   <option value="">Select Type</option>
                   <option value="Motor">Motor</option>
-                  <option value="Home">Home</option>
+                  <option value="Non Motor">Non Motor</option>
                   <option value="Travel">Travel</option>
                 </select>
               </div>
+              {isNonMotor && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Product Type *</label>
+                    <input type="text" name="productType" value={formData.productType} onChange={handleChange} required style={{ width: '100%' }} placeholder="Enter Product Type" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Coverage Type *</label>
+                    <input type="text" name="coverageType" value={formData.coverageType} onChange={handleChange} required style={{ width: '100%' }} placeholder="Enter Coverage Type" />
+                  </div>
+                </>
+              )}
               {isMotor && (
                 <>
                   <div>
@@ -182,9 +229,34 @@ const AddPolicyModal = ({ isOpen, onClose }: AddPolicyModalProps) => {
                 <input type="number" name="annualPremium" value={formData.annualPremium} onChange={handleChange} required style={{ width: '100%' }} />
               </div>
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Policy Document (PDF) *</label>
-                <input type="file" accept=".pdf" onChange={handleFileChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Policy Document (PDF/JPG/PNG) *</label>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
               </div>
+              {(isMotor || isNonMotor) && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Supporting Documents (PDF/JPG/PNG) - Optional</label>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onChange={handleSupportingFileChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '8px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
+                  {supportingDocumentFiles.length > 0 && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {supportingDocumentFiles.map((file, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 1rem', backgroundColor: '#1a1d23', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+                          <span style={{ fontSize: '0.9rem', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                            {file.name}
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => removeSupportingFile(idx)} 
+                            style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                            title="Remove file"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

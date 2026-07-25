@@ -294,7 +294,7 @@ export default function PolicyDetailsScreen() {
             </View>
           </View>
           <Text style={styles.policyNumber}>
-            {policy.policyType === 'Motor' ? `Vehicle No: ${policy.vehicleNumber || '-'}` : ''}
+            Policy Holder: {policy.policyHolderName || policy.clientName || '-'}
           </Text>
           <Text style={styles.insurerName}>Insured by {policy.insurer}</Text>
         </View>

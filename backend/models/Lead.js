@@ -12,7 +12,7 @@ const leadSchema = new mongoose.Schema({
   policyType: {
     type: String,
     required: true,
-    enum: ['Motor', 'Home', 'Travel'],
+    enum: ['Motor', 'Non Motor', 'Travel'],
   },
   carCondition: {
     type: String,

@@ -22,7 +22,7 @@ const Layout = () => {
           </button>
         </div>
       </main>
-      <AddPolicyModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} />
+      {isModalOpen && <AddPolicyModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} />}
     </div>
   );
 };

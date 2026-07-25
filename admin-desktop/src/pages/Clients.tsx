@@ -6,6 +6,25 @@ const API_URL = 'https://api.securefirst.co/api/clients';
 const CLIENT_API_BASE = 'https://api.securefirst.co/api/client';
 const POLICY_API_BASE = 'https://api.securefirst.co/api/policy';
 
+const getSupportingDocs = (value: any): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    if (typeof value === 'string' && value.startsWith('[') && value.endsWith(']')) {
+      return JSON.parse(value);
+    }
+  } catch (e) {
+    // Ignore and fallback
+  }
+  if (typeof value === 'string') {
+    if (value.includes(',')) {
+      return value.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [value];
+  }
+  return [];
+};
+
 const Clients = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +59,8 @@ const Clients = () => {
     policyType: 'Motor',
     vehicleType: '',
     vehicleNumber: '',
+    productType: '',
+    coverageType: '',
     policyNumber: '',
     insurer: '',
     issueDate: '',
@@ -47,6 +68,26 @@ const Clients = () => {
     sumInsured: '',
     annualPremium: '',
   });
+
+  const [policySupportingDocumentFiles, setPolicySupportingDocumentFiles] = useState<File[]>([]);
+
+  const handleSupportingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setPolicySupportingDocumentFiles(prev => {
+        const combined = [...prev, ...newFiles];
+        const unique = combined.filter((file, index, self) =>
+          self.findIndex(f => f.name === file.name && f.size === file.size) === index
+        );
+        return unique;
+      });
+    }
+    e.target.value = '';
+  };
+
+  const removeSupportingFile = (index: number) => {
+    setPolicySupportingDocumentFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const [isPolicyDeleteOpen, setIsPolicyDeleteOpen] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<string | null>(null);
@@ -132,6 +173,52 @@ const Clients = () => {
     }
   };
 
+  const handleDownloadSupportingDoc = async (filename: string) => {
+    try {
+      const url = `https://api.securefirst.co/uploads/${filename}`;
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed', error);
+      alert('Failed to download supporting document');
+    }
+  };
+
+  const handleDeleteSupportingDoc = async (policy: any, filename: string) => {
+    if (!window.confirm(`Are you sure you want to delete the supporting document "${filename}"?`)) {
+      return;
+    }
+    const currentDocs = getSupportingDocs(policy.supportingDocument);
+    const updatedDocs = currentDocs.filter(d => d !== filename);
+    const newSupportingValue = updatedDocs.length > 0 ? JSON.stringify(updatedDocs) : '';
+
+    try {
+      const url = `${POLICY_API_BASE}/${policy._id}`;
+      const res = await axios.put(url, {
+        supportingDocument: newSupportingValue
+      }, {
+        headers: { 
+          'X-API-Key': '1f39bc30096f61eb69144d2534136ecfe431f87d57ceb6ab3ed0be9f21866a92'
+        }
+      });
+      const updatedPolicy = res.data.data || res.data;
+      setSelectedPolicy((prev: any) => prev ? { ...prev, ...updatedPolicy } : null);
+      fetchClients();
+      alert('Document deleted successfully');
+    } catch (err) {
+      console.error('Error deleting document', err);
+      alert('Failed to delete document');
+    }
+  };
+
   const handleDownloadPolicy = async (policy: any) => {
     if (!policy.attachedDocument) {
       alert('No document attached to this policy');
@@ -158,6 +245,7 @@ const Clients = () => {
   const handlePolicyEditClick = (policy: any) => {
     setEditingPolicy(policy);
     setPolicyDocumentFile(null);
+    setPolicySupportingDocumentFiles([]);
     setPolicyFormData({
       clientName: policy.clientName,
       policyHolderName: policy.policyHolderName || '',
@@ -166,6 +254,8 @@ const Clients = () => {
       policyType: policy.policyType,
       vehicleType: policy.vehicleType || '',
       vehicleNumber: policy.vehicleNumber || '',
+      productType: policy.productType || '',
+      coverageType: policy.coverageType || '',
       policyNumber: policy.policyNumber,
       insurer: policy.insurer,
       issueDate: new Date(policy.issueDate).toISOString().split('T')[0],
@@ -180,11 +270,18 @@ const Clients = () => {
     e.preventDefault();
     const data = new FormData();
     Object.entries(policyFormData).forEach(([key, value]) => {
+      if (key === 'vehicleType' && policyFormData.policyType !== 'Motor') return;
+      if (key === 'vehicleNumber' && policyFormData.policyType !== 'Motor') return;
+      if (key === 'productType' && policyFormData.policyType !== 'Non Motor') return;
+      if (key === 'coverageType' && policyFormData.policyType !== 'Non Motor') return;
       data.append(key, value);
     });
     if (policyDocumentFile) {
       data.append('document', policyDocumentFile);
     }
+    policySupportingDocumentFiles.forEach(file => {
+      data.append('supportingDocument', file);
+    });
 
     try {
       const url = `${POLICY_API_BASE}/${editingPolicy._id}`;
@@ -291,6 +388,18 @@ const Clients = () => {
                 </div>
               </>
             )}
+            {selectedPolicy.policyType === 'Non Motor' && (
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Product Type</label>
+                  <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{selectedPolicy.productType || 'N/A'}</div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Coverage Type</label>
+                  <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{selectedPolicy.coverageType || 'N/A'}</div>
+                </div>
+              </>
+            )}
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Issue Date</label>
               <div style={{ fontSize: '1.15rem', color: '#fff', fontWeight: 600 }}>{new Date(selectedPolicy.issueDate).toLocaleDateString()}</div>
@@ -325,6 +434,34 @@ const Clients = () => {
               </button>
             </div>
           )}
+
+          {selectedPolicy.supportingDocument && (() => {
+            const docs = getSupportingDocs(selectedPolicy.supportingDocument);
+            return docs.map((doc, idx) => (
+              <div key={idx} style={{ marginTop: '1.5rem', padding: '1.5rem', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Supporting Document {docs.length > 1 ? `#${idx + 1}` : ''}</span>
+                  <span style={{ fontSize: '1rem', color: '#fff', fontWeight: 500, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '400px' }}>
+                    {doc}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                    onClick={() => handleDownloadSupportingDoc(doc)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', backgroundColor: '#1DD3B0', color: '#000', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                  >
+                    <Download size={16} /> Download
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteSupportingDoc(selectedPolicy, doc)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', border: 'none', backgroundColor: '#ea4335', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.95rem' }}
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       </div>
     );
@@ -492,7 +629,7 @@ const Clients = () => {
                       <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Policy Type *</label>
                       <select value={policyFormData.policyType} onChange={e => setPolicyFormData({...policyFormData, policyType: e.target.value})} style={{ backgroundColor: '#16191e', color: '#fff', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '6px' }}>
                         <option value="Motor">Motor Insurance</option>
-                        <option value="Home">Home Insurance</option>
+                        <option value="Non Motor">Non Motor Insurance</option>
                         <option value="Travel">Travel Insurance</option>
                       </select>
                     </div>
@@ -501,6 +638,18 @@ const Clients = () => {
                       <input required value={policyFormData.insurer} onChange={e => setPolicyFormData({...policyFormData, insurer: e.target.value})} style={{ backgroundColor: '#16191e' }} />
                     </div>
                   </div>
+                  {policyFormData.policyType === 'Non Motor' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+                      <div className="flex-col gap-2">
+                        <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Product Type *</label>
+                        <input required value={policyFormData.productType} onChange={e => setPolicyFormData({...policyFormData, productType: e.target.value})} style={{ backgroundColor: '#16191e', color: '#fff', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '6px' }} placeholder="Enter Product Type" />
+                      </div>
+                      <div className="flex-col gap-2">
+                        <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Coverage Type *</label>
+                        <input required value={policyFormData.coverageType} onChange={e => setPolicyFormData({...policyFormData, coverageType: e.target.value})} style={{ backgroundColor: '#16191e', color: '#fff', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '6px' }} placeholder="Enter Coverage Type" />
+                      </div>
+                    </div>
+                  )}
                   {policyFormData.policyType === 'Motor' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
                       <div className="flex-col gap-2">
@@ -556,6 +705,48 @@ const Clients = () => {
                     </div>
                   )}
                 </div>
+
+                {(policyFormData.policyType === 'Motor' || policyFormData.policyType === 'Non Motor') && (
+                  <div className="flex-col gap-2" style={{ marginBottom: '2rem' }}>
+                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Supporting Documents (PDF/JPG/PNG) - Optional</label>
+                    <input 
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      multiple
+                      onChange={handleSupportingFileChange}
+                      style={{ backgroundColor: '#16191e', padding: '0.6rem', border: '1px solid var(--border-light)', borderRadius: '6px', width: '100%', color: '#fff' }} 
+                    />
+                    {policySupportingDocumentFiles.length > 0 && (
+                      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {policySupportingDocumentFiles.map((file, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 1rem', backgroundColor: '#1a1d23', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#fff', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                              {file.name}
+                            </span>
+                            <button 
+                              type="button" 
+                              onClick={() => removeSupportingFile(idx)} 
+                              style={{ background: 'none', border: 'none', color: '#ea4335', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                              title="Remove file"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {editingPolicy && editingPolicy.supportingDocument && (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                        Current Supporting Docs:
+                        <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px' }}>
+                          {getSupportingDocs(editingPolicy.supportingDocument).map((doc, i) => (
+                            <li key={i}>{doc}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex gap-4" style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2.5rem', display: 'flex' }}>
                   <button type="button" onClick={() => setIsPolicyEditOpen(false)} className="btn-secondary" style={{ flex: 1, padding: '0.75rem' }}>Cancel</button>
